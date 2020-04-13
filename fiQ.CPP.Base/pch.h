@@ -31,24 +31,8 @@
 //#define DBINITCONSTANTS			// Used by OLEDB
 //#endif
 
-#include <algorithm>
-#include <cctype>
-#include <comdef.h>
-#include <deque>
-#include <direct.h>
-#include <exception>
-#include <fcntl.h>
-#include "io.h"
-#include <inttypes.h>
-#include <map>
-#include <math.h>
-#include <memory>
-#include <objbase.h>
-#include <set>
-#include <stdio.h>
-
-// In debug mode, ensure that CRT debugger enables memory leak tracking:
-#ifdef _DEBUG
+#include <memory> // Must be before stdlib to support memory functions
+#ifdef _DEBUG // In debug mode, ensure that CRT debugger enables memory leak tracking:
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
@@ -56,13 +40,34 @@
 #include <stdlib.h>
 #endif
 
+#include <stdio.h>
+
+//#include <algorithm>
+//#include <cctype>
+//#include <comdef.h>
+//#include <direct.h>
+//#include <exception>
+//#include <fcntl.h>
+//#include "io.h"
+//#include <inttypes.h>
+//#include <math.h>
+//#include <objbase.h>
+
+// STL containers:
+#include <deque>
+#include <map>
+#include <set>
 #include <string>
-#include <sys/stat.h>
-#include <tchar.h>
-#include <time.h>
-#include <sys/timeb.h>
-#include <tuple>
+//#include <tuple>
 #include <vector>
+
+//#include <sys/stat.h>
+//#include <tchar.h>
+#include <time.h>
+//#include <sys/timeb.h>
+
+#include "Tools/gsl.h" // Include local version - may use legit one someday
+
 #include <windows.h>
 
 #endif //PCH_H

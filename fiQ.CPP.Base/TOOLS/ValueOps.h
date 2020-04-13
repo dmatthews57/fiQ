@@ -78,8 +78,10 @@ public:
 		static constexpr T value = 1;
 	};
 	// Common math functions - powers of 10
+	[[gsl::suppress(bounds.4)]] // Suppress code analysis warnings, array access here already
+	[[gsl::suppress(bounds.2)]] // validates that Exponent is within range of array
 	_Check_return_ static constexpr unsigned long long PowerOf10(size_t Exponent) noexcept {
-		return PowersOf10[Exponent < 20 ? Exponent : 0];
+		return Exponent < _countof(PowersOf10) ? PowersOf10[Exponent] : 0;
 	}
 	// Common math functions - Integral value with minimum zero (i.e. treat negatives as zero)
 	template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> > >
