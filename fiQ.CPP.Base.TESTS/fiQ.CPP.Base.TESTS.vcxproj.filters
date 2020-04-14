@@ -33,5 +33,11 @@
     <ClCompile Include="TOOLS\SerialOps.cpp">
       <Filter>Source Files\Tools</Filter>
     </ClCompile>
+    <ClCompile Include="TOOLS\StringOps.cpp">
+      <Filter>Source Files\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="TOOLS\Tokenizer.cpp">
+      <Filter>Source Files\Tools</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

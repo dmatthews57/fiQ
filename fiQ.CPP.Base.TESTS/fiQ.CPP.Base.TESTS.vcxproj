@@ -160,7 +160,9 @@
     </ClCompile>
     <ClCompile Include="TOOLS\Exceptions.cpp" />
     <ClCompile Include="TOOLS\SerialOps.cpp" />
+    <ClCompile Include="TOOLS\StringOps.cpp" />
     <ClCompile Include="TOOLS\TimeClock.cpp" />
+    <ClCompile Include="TOOLS\Tokenizer.cpp" />
     <ClCompile Include="TOOLS\ValueOps.cpp" />
   </ItemGroup>
   <ItemGroup>

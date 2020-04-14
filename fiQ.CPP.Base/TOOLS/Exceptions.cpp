@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "Exceptions.h"
 #include "Logger.h"
+#include "StringOps.h"
 using namespace FIQCPPBASE;
 
 //==========================================================================================================================
@@ -39,9 +40,6 @@ constexpr const char* Exceptions::TranslateExceptionCode(T t) noexcept {
 	};
 }
 
-#include <locale>
-#include <codecvt>
-
 // Exceptions::InvalidParameterHandler: Convert invalid parameter condition to an exception
 void Exceptions::InvalidParameterHandler(
 	const wchar_t * expression, const wchar_t * function, const wchar_t * file, unsigned int line, uintptr_t) {
@@ -50,12 +48,11 @@ void Exceptions::InvalidParameterHandler(
 	const std::wstring f = std::wstring(file)
 		.append(L"(")
 		.append(std::to_wstring(line))
-		.append(L") ")
+		.append(L")::")
 		.append(function)
 		.append(L"(): ")
 		.append(expression);
-	//throw std::invalid_argument(std::string(f.cbegin(), f.cend()));
-	throw std::invalid_argument(std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>().to_bytes(f));	// TODO: MOVE THIS CONVERSION TO STRINGOPS
+	throw std::invalid_argument(StringOps::ConvertFromWideString(f));
 #else
 	// In Release mode, all arguments are NULL; use simple message:
 	UNREFERENCED_PARAMETER(expression);

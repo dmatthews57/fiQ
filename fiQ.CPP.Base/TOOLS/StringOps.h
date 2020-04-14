@@ -151,7 +151,7 @@ public:
 		}
 
 		//==================================================================================================================
-		// FlexReadString: Function to read a null-terminated decimal string (as atoi) into an UNSIGNED integer value
+		// FlexReadString: Function to read a null-terminated decimal string (as atoi) into a SIGNED integer value
 		// - Maximum number of characters to read is dynamically determined based on return type (excess characters ignored)
 		// - Signed version, checks for negative sign
 		// - Default return type is signed int
@@ -173,16 +173,16 @@ public:
 			long long rc = 0;
 			for(size_t s = 0; s < len ? IsDecChar(buf[s]) : false; ++s) {
 				rc *= 10;
-				rc += (buf[s] - '0');
+				rc += static_cast<long long>(buf[s]) - '0';
 			}
 			// Before casting oversized "rc" value to return type, ensure it is within valid boundary:
 			if(NegVal) {
 				rc = -rc;
-				return static_cast<T>(rc < (std::numeric_limits<T>::min)() ? (std::numeric_limits<T>::min)() : rc);
+				return gsl::narrow_cast<T>(rc < (std::numeric_limits<T>::min)() ? (std::numeric_limits<T>::min)() : rc);
 			}
-			else return static_cast<T>(rc > (std::numeric_limits<T>::max)() ? (std::numeric_limits<T>::max)() : rc);
+			else return gsl::narrow_cast<T>(rc > (std::numeric_limits<T>::max)() ? (std::numeric_limits<T>::max)() : rc);
 		}
-		// FlexReadString: Function to read a null-terminated decimal string (as atoi) into a SIGNED integer value
+		// FlexReadString: Function to read a null-terminated decimal string (as atoi) into an UNSIGNED integer value
 		// - Maximum number of characters to read is dynamically determined based on return type (excess characters ignored)
 		// - Unsigned version, will treat negative number strings as invalid (i.e. will return zero)
 		// - No default return type (this function must be explicitly invoked)
@@ -194,7 +194,7 @@ public:
 			unsigned long long rc = 0;
 			for(size_t s = 0; s < len ? IsDecChar(buf[s]) : false; ++s) {
 				rc *= 10;
-				rc += (buf[s] - '0');
+				rc += static_cast<unsigned long long>(buf[s]) - '0';
 			}
 			return static_cast<T>(rc > (std::numeric_limits<T>::max)() ? (std::numeric_limits<T>::max)() : rc);
 		}
@@ -273,6 +273,7 @@ public:
 			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> >
 		>
 		static size_t FlexWriteString(_Pre_writable_size_(MaxSize) char* Tgt, T t) {
+			static_assert(MaxSize == MaxDigits_v<T>, "Don't override MaxSize");
 			const size_t ActualDigits = FlexDigits(t);	// Temporary var is here to satisfy code analyzer; should
 			_Analysis_assume_(ActualDigits <= MaxSize);	// be optimized out of existence by compiler
 			switch(ActualDigits)
@@ -309,6 +310,7 @@ public:
 			typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> >
 		>
 		static size_t FlexWriteString(_Pre_writable_size_(MaxSize) char* Tgt, T t) {
+			static_assert(MaxSize == MaxDigits_v<T>, "Don't override MaxSize");
 			return t < 0 ?
 				(Tgt[0] = '-', 1 + FlexWriteString<std::make_unsigned_t<T> >(Tgt + 1, static_cast<std::make_unsigned_t<T> >(-t)))
 				: FlexWriteString(Tgt, static_cast<std::make_unsigned_t<T> >(t));
@@ -363,7 +365,7 @@ public:
 				return {Tgt, 1 + FlexWriteString<std::make_unsigned_t<T> >(
 					Tgt + 1, static_cast<std::make_unsigned_t<T> >(~t) + 1, ExactDigits - 1).second};
 			}
-			else if(ExactDigits > 0) return {Tgt, FlexWriteString(Tgt, static_cast<std::make_unsigned_t<T> >(t), ExactDigits).second};
+			else if(ExactDigits > 0) return {Tgt, FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t), ExactDigits).second};
 			else return {Tgt, 0};
 		}
 
@@ -384,9 +386,13 @@ public:
 			// Calculate the number of digits required to represent input value left of decimal place, then show as many
 			// decimal places as possible given that the maximum number of decimal places that can be expressed in any
 			// field is 9 (since this is highest possible value of exponent digit):
-			const char DecimalPlaces = static_cast<char>(ValueOps::Bounded<size_t>(
-				0, FieldSize - 1 - StringOps::Decimal::FlexDigits(static_cast<unsigned long long>(FXRate)), 9
-			));
+			const char DecimalPlaces = gsl::narrow_cast<char>(
+				ValueOps::Bounded<size_t>(
+					0,
+					FieldSize - 1 - StringOps::Decimal::FlexDigits(static_cast<unsigned long long>(FXRate)),
+					9
+				)
+			);
 			Tgt[0] = DecimalPlaces | 0x30;
 			StringOps::Decimal::FlexWriteString(Tgt + 1,
 				static_cast<unsigned long long>(FXRate * ValueOps::PowerOf10(DecimalPlaces)), FieldSize - 1);
@@ -495,7 +501,7 @@ public:
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
 			// Write first character, make recursive call to write next one:
 			Tgt[0] = Char(Src >> (4 * (len - 1)));
-			return 1 + WriteString<len - 1, T>(++Tgt, Src);
+			return 1 + ExWriteString<len - 1, T>(Tgt + 1, Src);
 		}
 		// ExWriteString: Function to format an integral value into an ASCII hex string (e.g. 0x12AB becomes "12AB")
 		// - This overload is terminal case - writes last nibble of unsigned value of any size
@@ -506,6 +512,7 @@ public:
 			typename = void,	// Unused placeholder argument - required to make signature distinct
 			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1)>
 		>
+		[[gsl::suppress(f.6)]] // Don't want to make this function noexcept
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
 			return Tgt[0] = Char(Src), 1;
 		}
@@ -522,7 +529,7 @@ public:
 		static size_t ExWriteString(_Pre_writable_size_(len) char* Tgt, T Src) {
 			// Add number of zeroes we will be writing to return value (deduct this value from bytes to be written by
 			// recursive call, so that default overload is then selected):
-			return ExMemSet(Tgt, '0', len - (sizeof(T) * 2)) + WriteString<sizeof(T) * 2, T>(Tgt + (len - (sizeof(T) * 2)), Src);
+			return ExMemSet(Tgt, '0', len - (sizeof(T) * 2)) + ExWriteString<sizeof(T) * 2, T>(Tgt + (len - (sizeof(T) * 2)), Src);
 		}
 		// ExWriteString: Function to format an integral value into an ASCII hex string (e.g. 0x12AB becomes "12AB")
 		// - This overload is called when any signed type is passed to function; just casts to unsigned equivalent
@@ -534,7 +541,7 @@ public:
 			typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> >
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
-			return WriteString<len>(Tgt, static_cast<std::make_unsigned_t<T> >(Src));
+			return ExWriteString<len>(Tgt, static_cast<std::make_unsigned_t<T> >(Src));
 		}
 
 		//==================================================================================================================
@@ -546,7 +553,7 @@ public:
 			Dest[0] = ByteToHex(Source);
 			return 1 + PackTo<len - 1>(Source + 2, Dest + 1);
 		}
-		template<> static size_t PackTo<0>(const char*, char*) {return 0;} // Terminal template case
+		template<> static size_t PackTo<0>(const char*, char*) noexcept {return 0;} // Terminal template case
 		//==================================================================================================================
 		// UnpackFrom: Function to unpack "len" bytes of hex into "len * 2" bytes of ASCII hex
 		// - For example, UnpackFrom<3>({0x12, 0xAB, 0xCD}) writes string "12ABCD" into first six bytes of target
@@ -557,7 +564,7 @@ public:
 			Dest[1] = Char(Source[0] & 0x0F);
 			return 2 + UnpackFrom<len - 1>(Source + 1, Dest + 2);
 		}
-		template<> static size_t UnpackFrom<0>(const char*, char*) {return 0;} // Terminal template case
+		template<> static size_t UnpackFrom<0>(const char*, char*) noexcept {return 0;} // Terminal template case
 	private:
 		// Internal constant expressions:
 		static constexpr const char ABTAB[17] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 0 };
@@ -594,7 +601,7 @@ public:
 		const char *ptr = buf ? buf + len : nullptr;
 		if(ptr ? (ptr > buf) : false) { // No action required for NULL or zero-length string
 			--ptr; // Move behind NULL terminator
-			while(ptr >= buf ? (*ptr == 0 || std::isspace(static_cast<unsigned char>(*ptr))) : false) --ptr;
+			while(ptr >= buf ? (*ptr == 0 || std::isspace(gsl::narrow_cast<unsigned char>(*ptr))) : false) --ptr;
 			++ptr; // Move ahead of last character
 		}
 		return std::string(buf, ptr - buf);
@@ -628,13 +635,23 @@ public:
 			const char *EndPtr = buf + len, *StartPtr = std::find_if_not(buf, EndPtr, [](int ch){return std::isspace(ch);});
 			if(StartPtr < EndPtr) { // No action required if we are already at end of string:
 				--EndPtr; // Move behind NULL terminator
-				while(EndPtr >= buf ? (*EndPtr == 0 || std::isspace(static_cast<unsigned char>(*EndPtr))) : false) --EndPtr;
+				while(EndPtr >= buf ? (*EndPtr == 0 || std::isspace(gsl::narrow_cast<unsigned char>(*EndPtr))) : false) --EndPtr;
 				++EndPtr; // Move ahead of last character
 			}
 			return std::string(StartPtr, EndPtr - StartPtr);
 		}
 		else return std::string();
 	}
+
+	//======================================================================================================================
+	// Wide character string conversion functions
+	_Check_return_ static std::string ConvertFromWideString(const std::wstring& utf16) {
+		return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(utf16);
+	}
+	_Check_return_ static std::wstring ConvertToWideString(const std::string& utf8) {
+		return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(utf8);
+	}
+
 };
 
 } // (end namespace FIQCPPBASE)

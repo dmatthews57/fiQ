@@ -42,7 +42,7 @@
 
 #include <stdio.h>
 
-//#include <algorithm>
+#include <algorithm>
 //#include <cctype>
 //#include <comdef.h>
 //#include <direct.h>
@@ -52,6 +52,8 @@
 //#include <inttypes.h>
 //#include <math.h>
 //#include <objbase.h>
+#include <locale>
+#include <codecvt>
 
 // STL containers:
 #include <deque>

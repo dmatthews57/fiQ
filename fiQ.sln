@@ -9,6 +9,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fiQ.CPP.Base.TESTS", "fiQ.C
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fiQ.CPP.TestConsole", "fiq.CPP.TestConsole\fiq.CPP.TestConsole.vcxproj", "{A33108F1-58D0-47D6-8EBE-390C5E956B2E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6BEB9602-1706-4960-A683-9C19A076CD50}"
+	ProjectSection(SolutionItems) = preProject
+		CustomAnalysis.ruleset = CustomAnalysis.ruleset
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

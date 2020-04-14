@@ -159,6 +159,7 @@
     <ClInclude Include="TOOLS\SerialOps.h" />
     <ClInclude Include="TOOLS\StringOps.h" />
     <ClInclude Include="TOOLS\TimeClock.h" />
+    <ClInclude Include="TOOLS\Tokenizer.h" />
     <ClInclude Include="Tools\ValueOps.h" />
   </ItemGroup>
   <ItemGroup>

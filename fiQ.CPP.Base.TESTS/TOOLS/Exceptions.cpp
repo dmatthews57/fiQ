@@ -28,6 +28,7 @@ namespace fiQCPPBaseTESTS
 			// Disable debug assertion dialog, set invalid parameter handler, throw a CRT exception:
 			_CrtSetReportMode(_CRT_ASSERT, 0);
 			_set_invalid_parameter_handler(Exceptions::InvalidParameterHandler);
+#pragma warning (suppress : 6387)
 			Assert::ExpectException<std::invalid_argument>([] {printf(NULL);}, L"Expected invalid_argument");
 		}
 

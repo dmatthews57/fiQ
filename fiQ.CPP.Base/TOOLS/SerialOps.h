@@ -95,7 +95,7 @@ _Check_return_ inline bool SerialOps::Stream::Read<std::string>(std::string& Tgt
 	// Read and validate incoming length (note upper boundary may need to be expanded in the future if required): 
 	uint32_t len = 0;
 	if(this->Read(len)) {
-		if(ValueOps::Is(len).InRange(0, (std::numeric_limits<uint32_t>::max)())) {
+		if(ValueOps::Is(len).InRange(0, (std::numeric_limits<decltype(len)>::max)())) {
 			// Allocate temporary buffer for string, read and assign to target
 			std::unique_ptr<char, decltype(&_freea)> TempBuf(static_cast<char*>(_malloca(static_cast<size_t>(len) + 10)), _freea);
 			if(TempBuf.get()) {
@@ -111,7 +111,7 @@ _Check_return_ inline bool SerialOps::Stream::Read<std::string>(std::string& Tgt
 }
 template<>
 _Check_return_ inline bool SerialOps::Stream::Write<std::string>(const std::string& Src) const {
-	const uint32_t len = gsl::narrow_cast<uint32_t>(ValueOps::Bounded<size_t>(0, Src.length(), (std::numeric_limits<uint32_t>::max)()));
+	const uint32_t len = gsl::narrow_cast<uint32_t>(ValueOps::Bounded<size_t>(0, Src.length(), (std::numeric_limits<decltype(len)>::max)()));
 	// Write 32-bit length, if successful follow with actual data
 	if(this->Write(len)) return this->Write(Src.data(), len);
 	else return false;

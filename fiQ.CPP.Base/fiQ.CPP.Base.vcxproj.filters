@@ -48,6 +48,9 @@
     <ClInclude Include="Tools\gsl.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="TOOLS\Tokenizer.h">
+      <Filter>Header Files\Tools</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">

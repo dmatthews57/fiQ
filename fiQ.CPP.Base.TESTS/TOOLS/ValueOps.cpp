@@ -49,16 +49,16 @@ namespace fiQCPPBaseTESTS
 
 		TEST_METHOD(CalcExponent)
 		{
-			Assert::AreEqual(ValueOps::CalcExponent<int, 10, 0>::value, 1);
-			Assert::AreEqual(ValueOps::CalcExponent<int, 50, 0>::value, 1);
-			Assert::AreEqual(ValueOps::CalcExponent<int, 2, 10>::value, 1024);
-			Assert::AreEqual(ValueOps::CalcExponent<unsigned long long, 2, 63>::value, 9223372036854775808);
-			Assert::AreNotEqual(ValueOps::CalcExponent<unsigned long long, 2, 63>::value, 1ULL);
+			Assert::AreEqual(1, ValueOps::CalcExponent<int, 10, 0>::value);
+			Assert::AreEqual(1, ValueOps::CalcExponent<int, 50, 0>::value);
+			Assert::AreEqual(1024, ValueOps::CalcExponent<int, 2, 10>::value);
+			Assert::AreEqual(9223372036854775808, ValueOps::CalcExponent<unsigned long long, 2, 63>::value);
+			Assert::AreNotEqual(1ULL, ValueOps::CalcExponent<unsigned long long, 2, 63>::value);
 		}
 
 		TEST_METHOD(MinZero)
 		{
-			Assert::AreEqual(ValueOps::MinZero(LLONG_MIN), 0LL);
+			Assert::AreEqual(0LL, ValueOps::MinZero(LLONG_MIN));
 			Assert::AreEqual(ValueOps::MinZero(-1), 0);
 			Assert::AreEqual(ValueOps::MinZero(0), 0);
 			Assert::AreEqual(ValueOps::MinZero(1), 1);

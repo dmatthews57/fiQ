@@ -78,8 +78,6 @@ public:
 		static constexpr T value = 1;
 	};
 	// Common math functions - powers of 10
-	[[gsl::suppress(bounds.4)]] // Suppress code analysis warnings, array access here already
-	[[gsl::suppress(bounds.2)]] // validates that Exponent is within range of array
 	_Check_return_ static constexpr unsigned long long PowerOf10(size_t Exponent) noexcept {
 		return Exponent < _countof(PowersOf10) ? PowersOf10[Exponent] : 0;
 	}

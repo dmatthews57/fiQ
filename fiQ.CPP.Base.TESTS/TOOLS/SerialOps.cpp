@@ -26,7 +26,7 @@ namespace fiQCPPBaseTESTS
 		TEST_METHOD(SerializePrimitive)
 		{
 			std::random_device rd;
-			const std::uniform_int_distribution<> dis((std::numeric_limits<int>::min)(), (std::numeric_limits<int>::max)());
+			const std::uniform_int_distribution<> dis(INT_MIN, INT_MAX);
 			std::unique_ptr<char[]> TempBuf = std::make_unique<char[]>(200);
 			for(int i = 0; i < 20; ++i) {
 				int j = dis(rd), k = 0;
