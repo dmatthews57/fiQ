@@ -1,0 +1,35 @@
+Outside of any section
+
+[]
+This section should be ignored
+
+[SECTION1]
+Name=Value
+" LeftSpacedName"="RightSpacedValue "
+"RightSpacedName "=" LeftSpacedValue"
+" BothSpacedName " = " BothSpacedValue "
+;inline comment
+[ SECTION 2]
+
+Name1 = Value1
+
+Name2=Value2	//Test comment
+
+[SECTION 3 ]
+
+[" SECTION 4 "]
+Value1
+Value2
+Value3
+
+Value4
+;Commented
+//commented 2
+"Value 5"
+
+[SECTION5]
+Tokenizer=Field0,Field1,Field2
+Int=12345
+UShort=123
+Hex=0xFFAB1122
+Bool=Y

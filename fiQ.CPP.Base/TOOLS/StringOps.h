@@ -156,7 +156,7 @@ public:
 		// - Signed version, checks for negative sign
 		// - Default return type is signed int
 		template<typename T = int, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> > >
-		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) {
+		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) noexcept(false) {
 			// Maximum length to read is maximum number of digits for this type, minus one (to account for possible negative
 			// sign; note that if present, negative sign will not be counted against maximum length below):
 			constexpr size_t MaxChars = MaxDigits_v<T> - 1;
@@ -467,7 +467,7 @@ public:
 		// - Return type defaults to unsigned 64-bit integer
 		// - Maximum number of characters to read is dynamically determined based on return type (excess characters are ignored)
 		template<typename T = unsigned long long, typename = std::enable_if_t<std::is_unsigned_v<T> && std::is_integral_v<T> > >
-		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) {
+		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) noexcept(false) {
 			constexpr size_t MaxChars = (sizeof(T) * 2);
 			// If string starts with "0x", skip ahead so long as length is dynamic (zero) or is >= 2
 			if((buf[0] == '0' && (len == 0 || len >= 2)) ? (buf[1] == 'x' || buf[1] == 'X') : false) {
@@ -512,8 +512,7 @@ public:
 			typename = void,	// Unused placeholder argument - required to make signature distinct
 			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1)>
 		>
-		[[gsl::suppress(f.6)]] // Don't want to make this function noexcept
-		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
+		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) noexcept(false) {
 			return Tgt[0] = Char(Src), 1;
 		}
 		// WriteString: Function to format an integral value into an ASCII hex string (e.g. 0x12AB becomes "12AB")

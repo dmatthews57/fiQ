@@ -4,7 +4,6 @@
 #include "pch.h"
 #include "Exceptions.h"
 #include "Logger.h"
-#include "StringOps.h"
 using namespace FIQCPPBASE;
 
 //==========================================================================================================================
@@ -45,14 +44,17 @@ void Exceptions::InvalidParameterHandler(
 	const wchar_t * expression, const wchar_t * function, const wchar_t * file, unsigned int line, uintptr_t) {
 #ifdef _DEBUG
 	// In Debug mode, function and failed expression are available; build helpful error message:
-	const std::wstring f = std::wstring(file)
-		.append(L"(")
-		.append(std::to_wstring(line))
-		.append(L")::")
-		.append(function)
-		.append(L"(): ")
-		.append(expression);
-	throw std::invalid_argument(StringOps::ConvertFromWideString(f));
+	throw std::invalid_argument(
+		StringOps::ConvertFromWideString(
+			std::wstring(file)
+				.append(L"(")
+				.append(std::to_wstring(line))
+				.append(L")::")
+				.append(function)
+				.append(L"(): ")
+				.append(expression)
+		)
+	);
 #else
 	// In Release mode, all arguments are NULL; use simple message:
 	UNREFERENCED_PARAMETER(expression);

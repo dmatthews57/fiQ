@@ -48,6 +48,13 @@ public:
 		// Note: Adds 5 milliseconds before rounding to account for clock sampling error
 		return (((((Timestamp.time - tc.Timestamp.time) * 1000) + (Timestamp.millitm - tc.Timestamp.millitm)) + 5) / 1000);
 	}
+	// Return time from now until input timestamp (same operation, different readability)
+	_Check_return_ int MSecTill(const TimeClock& tc) const noexcept {
+		return tc.MSecSince(*this);
+	}
+	_Check_return_ time_t SecTill(const TimeClock& tc) const noexcept {
+		return tc.SecSince(*this);
+	}
 	//======================================================================================================================
 	// Time variable const accessors
 	_Check_return_ const time_t& GetSeconds() const noexcept {return Timestamp.time;}

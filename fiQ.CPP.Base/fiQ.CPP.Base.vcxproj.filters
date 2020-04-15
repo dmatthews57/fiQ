@@ -51,12 +51,24 @@
     <ClInclude Include="TOOLS\Tokenizer.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="TOOLS\ConfigFile.h">
+      <Filter>Header Files\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="TOOLS\SocketOps.h">
+      <Filter>Header Files\Tools</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TOOLS\Exceptions.cpp">
+      <Filter>Source Files\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="TOOLS\ConfigFile.cpp">
+      <Filter>Source Files\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="TOOLS\SocketOps.cpp">
       <Filter>Source Files\Tools</Filter>
     </ClCompile>
   </ItemGroup>

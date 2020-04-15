@@ -91,6 +91,7 @@ private:
 //==========================================================================================================================
 // Stream function specializations - Validate types and pass to child virtual functions
 template<>
+GSL_SUPPRESS(r.10) // Want to use _malloca here, which implicitly allows malloc
 _Check_return_ inline bool SerialOps::Stream::Read<std::string>(std::string& Tgt) const {
 	// Read and validate incoming length (note upper boundary may need to be expanded in the future if required): 
 	uint32_t len = 0;

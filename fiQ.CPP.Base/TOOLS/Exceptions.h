@@ -3,8 +3,10 @@
 // Exceptions.h : Classes and functions for exception handling
 //==========================================================================================================================
 
+#include <comdef.h>
 #include <errhandlingapi.h>
 #include <stdexcept>
+#include "StringOps.h"
 
 // FORMAT_RUNTIME_ERROR: Helper macro for producing runtime_error object with information on throw site
 // - Requires use of macro rather than inline function so that FILE and FUNCTION macros work as expected
@@ -23,6 +25,11 @@ namespace FIQCPPBASE {
 		// TranslateExceptionCode: Return string literal corresponding with input value
 		template<typename T> // Templated input type as this could be DWORD or UINT, depending on source
 		constexpr const char* TranslateExceptionCode(T t) noexcept;
+
+		// ConvertCOMError: Convert value from GetLastError or GetWSALastError to string value
+		inline std::string ConvertCOMError(int errcode) {
+			return StringOps::ConvertFromWideString(_com_error(errcode).ErrorMessage());
+		}
 
 		// InvalidParameterHandler: Convert invalid parameter condition to an exception
 		// - Usage: _set_invalid_parameter_handler(Exceptions::InvalidParameterHandler);
