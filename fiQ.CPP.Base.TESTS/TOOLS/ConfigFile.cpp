@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "CppUnitTest.h"
+#include "ToStrings.h"
 #include "Tools/ConfigFile.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -57,7 +58,7 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual("Field1", toks.Value(1));
 			Assert::AreEqual("Field2", toks.Value(2));
 			Assert::AreEqual(12345, sec->GetNamedInt("Int"));
-			Assert::IsTrue(gsl::narrow_cast<unsigned short>(123) == sec->GetNamedUShort("UShort"), L"Incorrect unsigned short value");
+			Assert::AreEqual(gsl::narrow_cast<unsigned short>(123), sec->GetNamedUShort("UShort"));
 			Assert::AreEqual(0xFFAB1122ULL, sec->GetNamedHex("Hex"));
 			Assert::AreEqual(true, sec->GetNamedBool("Bool"));
 		}

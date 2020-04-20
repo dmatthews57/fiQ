@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "CppUnitTest.h"
+#include "ToStrings.h"
 #include "Tools/StringOps.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -221,9 +222,8 @@ namespace fiQCPPBaseTESTS
 
 		TEST_METHOD(AsciiReadString)
 		{
-			const unsigned char uchar_12 = 0x12;
-			Assert::AreEqual(uchar_12, StringOps::Ascii::ReadString<2>("123456ABCDEFEDCB"), L"Invalid value (unsigned char)");
-			Assert::IsTrue(StringOps::Ascii::ReadString<4>("123456ABCDEFEDCB") == 0x1234, L"Invalid value (unsigned short)"); // Won't accept unsigned short template argument
+			Assert::AreEqual(static_cast<unsigned char>(0x12), StringOps::Ascii::ReadString<2>("123456ABCDEFEDCB"), L"Invalid value (unsigned char)");
+			Assert::AreEqual(static_cast<unsigned short>(0x1234), StringOps::Ascii::ReadString<4>("123456ABCDEFEDCB"), L"Invalid value (unsigned short)");
 			Assert::AreEqual(0x123456UL, StringOps::Ascii::ReadString<6>("123456ABCDEFEDCB"), L"Invalid value (unsigned long 6)");
 			Assert::AreEqual(0x123456ABUL, StringOps::Ascii::ReadString<8>("123456ABCDEFEDCB"), L"Invalid value (unsigned long 8)");
 			Assert::AreEqual(0x123456ABCDULL, StringOps::Ascii::ReadString<10>("123456ABCDEFEDCB"), L"Invalid value (unsigned long long 10)");

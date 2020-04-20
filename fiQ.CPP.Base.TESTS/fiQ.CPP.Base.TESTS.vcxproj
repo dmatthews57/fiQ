@@ -161,6 +161,7 @@
     <ClCompile Include="TOOLS\ConfigFile.cpp" />
     <ClCompile Include="TOOLS\Exceptions.cpp" />
     <ClCompile Include="TOOLS\SerialOps.cpp" />
+    <ClCompile Include="TOOLS\SocketOps.cpp" />
     <ClCompile Include="TOOLS\StringOps.cpp" />
     <ClCompile Include="TOOLS\TimeClock.cpp" />
     <ClCompile Include="TOOLS\Tokenizer.cpp" />
@@ -170,6 +171,9 @@
     <ProjectReference Include="..\fiQ.CPP.Base\fiQ.CPP.Base.vcxproj">
       <Project>{c546163f-a6c1-4d7b-9276-680849cc8d39}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ToStrings.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

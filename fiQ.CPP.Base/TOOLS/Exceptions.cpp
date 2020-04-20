@@ -79,3 +79,23 @@ LONG Exceptions::UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep) {
 	// Return to inform program that it should execute its default handler (which will typically terminate the process):
 	return EXCEPTION_EXECUTE_HANDLER;
 }
+
+// AddExceptionToMap: Local function used while unrolling exceptions to add the current exception to map,
+// then recursively throw until no longer nested
+namespace FIQCPPBASE {
+	namespace Exceptions {
+		void AddExceptionToMap(std::map<int,std::string>& Tgt, const std::exception& e, int depth) {
+			Tgt.insert(std::map<int,std::string>::value_type(depth, e.what()));
+			try {
+				std::rethrow_if_nested(e);
+			}
+			catch(const std::exception& ee) {AddExceptionToMap(Tgt, ee, ++depth);}
+		}
+	}
+}
+// UnrollExceptions: Unroll nexted exceptions into a map of strings indexed by depth
+_Check_return_ std::map<int,std::string> Exceptions::UnrollExceptions(const std::exception& e) {
+	std::map<int,std::string> retval;
+	Exceptions::AddExceptionToMap(retval, e, 0);
+	return retval;
+}

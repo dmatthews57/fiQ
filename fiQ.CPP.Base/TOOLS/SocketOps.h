@@ -109,7 +109,9 @@ public:
 	// CloseSocket: Close socket and invalidate socket handle
 	static void Close(SOCKET& s) {if(s != INVALID_SOCKET) closesocket(s); s = INVALID_SOCKET;}
 
-	// Forward declarations for SessionSocket class and smart pointer:
+	// Forward declarations for ServerSocket, SessionSocket class and smart pointers:
+	class ServerSocket;
+	using ServerSocketPtr = std::unique_ptr<ServerSocket>;
 	class SessionSocket;
 	using SessionSocketPtr = std::unique_ptr<SessionSocket>;
 
@@ -118,6 +120,9 @@ public:
 	// - Note this class is NOT internally thread-safe; use object within single thread only (or protect with locks)
 	class ServerSocket {
 	public:
+		//==================================================================================================================
+		// Public named constructor
+		_Check_return_ static ServerSocketPtr Create() {return std::make_unique<ServerSocket>(SocketOps::pass_key());}
 		//==================================================================================================================
 		// External accessor functions
 		_Check_return_ const std::string& GetLastErrString() const noexcept {return LastErrString;}
@@ -134,28 +139,34 @@ public:
 		// Socket management functions
 		_Check_return_ bool Open(unsigned short ListenPort, _In_opt_z_ const char* Interface = nullptr, int Backlog = 10);
 		_Check_return_ Result WaitEvent(int Timeout) const;
-		_Check_return_ SessionSocketPtr Accept(_Inout_opt_ sockaddr_in* saddr = nullptr,
-			int TLSTimeout = 0, size_t TLSReadBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT, bool TLSBufferedRead = false);
 		void Close() {SocketOps::Close(SocketHandle);}
+		//==================================================================================================================
+		// Accept function: Accepts new incoming session
+		// - Note that this function will block waiting for a new connection, caller is assumed to have used WaitEvent
+		// - Note that this function will also block to perform TLS negotiation (may add async TLS option in the future)
+		_Check_return_ SessionSocketPtr Accept(_Inout_opt_ sockaddr_in* saddr = nullptr,
+			int TLSTimeout = 0, size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
 		//==================================================================================================================
 		// Credential management functions
 		_Check_return_ bool CredentialsValid() const noexcept {
 			return ((hCreds.dwLower || hCreds.dwUpper) && pCertContext && hMyCertStore && SchannelCred.dwVersion);
 		}
 		_Check_return_ bool InitCredentialsFromStore( // Reads certificate from store (Local Machine or Current User)
-			const std::string& CertName, const std::string& Method = "", bool LocalMachineStore = true);
+			const std::string& CertName, const std::string& TLSMethod = "", bool LocalMachineStore = true);
 		_Check_return_ bool InitCredentialsFromFile( // Reads certificate from PKCS12 store file
-			const std::string& FileName, const std::string& FilePassword, const std::string& CertName, const std::string& Method = "");
+			const std::string& FileName, const std::string& FilePassword, const std::string& CertName,
+			const std::string& TLSMethod = "");
 		void CleanupCredentials();
 
 		//==================================================================================================================
-		// Public constructor/destructor
-		ServerSocket() noexcept = default;
+		// Public constructor (locked by private pass key), destructor
+		ServerSocket(SocketOps::pass_key) noexcept {};
 		~ServerSocket() noexcept(false) {
 			Close();
 			CleanupCredentials();
 		}
-		// Deleted copy/move constructors and assignment operators
+		// Deleted default/copy/move constructors and assignment operators
+		ServerSocket() = delete;
 		ServerSocket(const ServerSocket&) = delete;
 		ServerSocket(ServerSocket&&) = delete;
 		ServerSocket& operator=(const ServerSocket&) = delete;
@@ -164,7 +175,7 @@ public:
 	private:
 
 		// Private utility functions
-		_Check_return_ bool CompleteInitCredentials(const std::string& Method);
+		_Check_return_ bool CompleteInitCredentials(const std::string& TLSMethod);
 		_Check_return_ Result TLSNegotiate(SessionSocketPtr& sp, int Timeout);
 
 		// Private member variables
@@ -177,7 +188,6 @@ public:
 		PCCERT_CONTEXT pCertContext = nullptr;	// Handle held from init to cleanup
 		CredHandle hCreds = {0};				// Handle actually used for negotiations
 	};
-	using ServerSocketPtr = std::unique_ptr<ServerSocket>;
 
 	//======================================================================================================================
 	// SessionSocket: Container class for managing an active socket session
@@ -186,11 +196,10 @@ public:
 	public:
 		//==================================================================================================================
 		// Public named constructors (client mode only, performs outbound connection attempt)
-		_Check_return_ static SessionSocketPtr Connect(_In_z_ const char* RemoteIP, unsigned short RemotePort,
-			bool UsingTLS = false, size_t ReadBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT, bool BufferedRead = false,
-			int Timeout = 0);
+		_Check_return_ static SessionSocketPtr Connect(_In_z_ const char* RemoteIP, unsigned short RemotePort, int Timeout = 0,
+			bool UsingTLS = false, const std::string& TLSMethod = "", size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
 		_Check_return_ static SessionSocketPtr ConnectAsync(_In_z_ const char* RemoteIP, unsigned short RemotePort,
-			bool UsingTLS = false, size_t ReadBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT, bool BufferedRead = false);
+			bool UsingTLS = false, size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
 
 		//==================================================================================================================
 		// External accessor functions
@@ -201,16 +210,24 @@ public:
 		_Check_return_ bool SocketValid() const noexcept {return (SocketHandle != INVALID_SOCKET);}
 		_Check_return_ bool IsSocket(SOCKET s) const noexcept {return (s == SocketHandle);}
 		_Check_return_ bool TLSReady() const noexcept {
-			return (ValueOps::Is(TLSBufSize).InRange(SocketOps::TLS_BUFFER_SIZE_MIN, SocketOps::TLS_BUFFER_SIZE_MAX) && ReadBuf.get());
+			return (
+				ValueOps::Is(TLSBufSize).InRange(SocketOps::TLS_BUFFER_SIZE_MIN, SocketOps::TLS_BUFFER_SIZE_MAX)
+				&& ReadBuf.get()
+				&& ClearBuf.get()
+			);
 		}
 		bool AddToFD(fd_set& fd) const noexcept(false) {
 			return (fd.fd_count < FD_SETSIZE && SocketHandle != INVALID_SOCKET) ?
 				(fd.fd_array[fd.fd_count++] = SocketHandle, true) : false;
 		}
 		void SetSessionFlags(SocketFlags sf) noexcept {SessionFlags |= sf;}
+		std::string GetTLSCipherSuite() const {return StringOps::ConvertFromWideString(CipherInfo.szCipherSuite);}
+		std::string GetTLSCipher() const {return StringOps::ConvertFromWideString(CipherInfo.szCipher);}
+		std::string GetTLSHash() const {return StringOps::ConvertFromWideString(CipherInfo.szHash);}
+		std::string GetTLSExchange() const {return StringOps::ConvertFromWideString(CipherInfo.szExchange);}
 		//==================================================================================================================
 		// Socket management functions
-		_Check_return_ Result PollConnect(int TLSTimeout);
+		_Check_return_ Result PollConnect(int TLSTimeout = 0, const std::string& TLSMethod = "");
 		_Check_return_ Result WaitEvent(int Timeout) const;
 		_Check_return_ Result Send(_In_reads_(len) const char* buf, size_t len);
 		_Check_return_ Result ReadExact(_Out_writes_(BytesToRead) char* Tgt, size_t BytesToRead, int Timeout);
@@ -220,23 +237,26 @@ public:
 		void Close() {
 			SocketOps::Close(SocketHandle);
 			// Reset state of TLS member variables (if any)
-			ReadBufBytes = PacketBufBytes = 0;
+			ReadBufBytes = ClearBufBytes = 0;
 			memset(&StreamSizes, 0, sizeof(StreamSizes));
+			memset(&CipherInfo, 0, sizeof(CipherInfo));
 			if(UsingTLS ? (hContext.dwLower || hContext.dwUpper) : false) {
-				// TODO: SSL CLEANUP - DeleteSecurityContext, clear ClientCreds
-				// (look at whether vars could need destruction even if hContext not valid)
+				SocketOps::GetFunctionTable()->DeleteSecurityContext(&hContext);
+				hContext.dwLower = hContext.dwUpper = 0;
 			}
+			ClientCred.reset(nullptr);
 		}
 
 		//==================================================================================================================
 		// Public constructor (locked by private pass-key), public destructor
-		SessionSocket(SocketOps::pass_key, bool tls, size_t ReadBufferSize, bool BufferedRead) : UsingTLS(tls),
-			TLSBufSize(ValueOps::Bounded(SocketOps::TLS_BUFFER_SIZE_MIN, ReadBufferSize, SocketOps::TLS_BUFFER_SIZE_MAX)),
+		SessionSocket(SocketOps::pass_key, bool _UsingTLS, size_t _TLSBufSize) : UsingTLS(_UsingTLS),
+			TLSBufSize(ValueOps::Bounded(SocketOps::TLS_BUFFER_SIZE_MIN, _TLSBufSize, SocketOps::TLS_BUFFER_SIZE_MAX)),
 			SocketHandle(INVALID_SOCKET), SessionFlags(SocketFlags::None),
-			ReadBuf(nullptr), ReadBufBytes(0), PacketBuf(nullptr), PacketBufBytes(0) {
+			ReadBuf(nullptr), ReadBufBytes(0), ClearBuf(nullptr), ClearBufBytes(0) {
+			static_assert(SocketOps::TLS_BUFFER_SIZE_MAX <= ULONG_MAX, "Invalid maximum TLS buffer size");
 			if(UsingTLS) {
 				ReadBuf = std::make_unique<char[]>(TLSBufSize + 10);
-				if(BufferedRead) PacketBuf = std::make_unique<char[]>(TLSBufSize + 10);
+				ClearBuf = std::make_unique<char[]>(TLSBufSize + 10);
 			}
 		}
 		~SessionSocket() noexcept(false) {Close();}
@@ -249,16 +269,28 @@ public:
 	private:
 
 		// Private utility functions
-		void TLSNegotiate(int Timeout);
+		_Check_return_ Result TLSNegotiate(int Timeout, const std::string& Method);
 		_Check_return_ Result SendTLS(_In_reads_(len) const char* buf, size_t len);
 		_Check_return_ Result ReadExactTLS(_Out_writes_(BytesToRead) char* Tgt, size_t BytesToRead, int Timeout);
 		_Check_return_ Result ReadAvailableTLS(_Out_writes_(MaxBytes) char* Tgt, size_t MaxBytes, size_t& BytesRead);
 		_Check_return_ Result ReadPacketTLS(_Out_writes_(MaxBytes) char* Tgt, size_t MaxBytes, size_t& BytesRead, int Timeout);
+		_Check_return_ Result PrivateReadTLS(int Timeout);
 
 		// ClientCredentials: Container class for TLS context variables
 		class ClientCredentials {
 		public:
+			_Check_return_ bool Valid() const noexcept {return (hCreds.dwLower || hCreds.dwUpper );}
+			_Check_return_ CredHandle* GetCreds() noexcept {return &hCreds;}
+			_Check_return_ bool Init(const std::string& TLSMethod, std::string& LastErrString);
+			void Cleanup();
+			// Public constructor/destructor
 			ClientCredentials() noexcept = default;
+			~ClientCredentials() noexcept(false) {Cleanup();}
+			// Deleted copy/move constructors and assignment operators
+			ClientCredentials(const ClientCredentials&) = delete;
+			ClientCredentials(ClientCredentials&&) = delete;
+			ClientCredentials& operator=(const ClientCredentials&) = delete;
+			ClientCredentials& operator=(ClientCredentials&&) = delete;
 		private:
 			CredHandle hCreds = {0};
 			SCHANNEL_CRED SchannelCred = {0};
@@ -278,8 +310,8 @@ public:
 		SecPkgContext_CipherInfo CipherInfo = {0};		// Negotiated cipher data
 		std::unique_ptr<char[]>	ReadBuf;	// Standard TLS socket read buffer (holds raw incoming data)
 		size_t ReadBufBytes;				// Number of bytes currently available in ReadBuf
-		std::unique_ptr<char[]>	PacketBuf;	// Buffered TLS data buffer (holds received cleartext data)
-		size_t PacketBufBytes;				// Number of bytes currently available in PacketBuf
+		std::unique_ptr<char[]>	ClearBuf;	// Buffered TLS data buffer (holds decrypted cleartext data)
+		size_t ClearBufBytes;				// Number of bytes currently available in ClearBuf
 
 		// Access declarations
 		friend ServerSocket; // Allow ServerSocket to access internal members
@@ -293,6 +325,7 @@ private:
 };
 
 //==========================================================================================================================
+#pragma region SocketOps
 // SocketOps::InitServer: Create and initialize a SOCKET, bind it to the specified port and (optional) interface and listen
 GSL_SUPPRESS(type.1) // reinterpret_cast is preferable to C-style cast (required for call to bind())
 _Check_return_ inline SOCKET SocketOps::InitServer(
@@ -322,8 +355,7 @@ _Check_return_ inline SOCKET SocketOps::InitServer(
 		else if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(WSAGetLastError());
 		return INVALID_SOCKET;
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception initializing listener socket"));}
-
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Listener socket initialization failed"));}
 }
 // SocketOps::Accept: Accept incoming connection request (will block until client request avaialble)
 GSL_SUPPRESS(type.1) // reinterpret_cast is preferable to C-style cast (required for call to accept())
@@ -349,7 +381,7 @@ _Check_return_ inline SOCKET SocketOps::Accept(
 		else if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(WSAGetLastError());
 		return c;
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception accepting session"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Session accept failed"));}
 }
 // SocketOps::DNSLookup: Retrieve IP address for specified name
 GSL_SUPPRESS(type.1) // reinterpret_cast is preferable to C-style cast (required for call to inet_ntop())
@@ -378,7 +410,7 @@ _Check_return_ inline bool SocketOps::DNSLookup(
 		else if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(wrc);
 		return (TgtIP[0] != 0);
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception looking up DNS name"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("DNS name lookup failed"));}
 }
 // SocketOps::Connect: Attempt outbound connection to the specified IP and port
 GSL_SUPPRESS(type.1) // reinterpret_cast is preferable to C-style cast (required for calls to bind() and connect())
@@ -443,7 +475,7 @@ _Check_return_ inline SOCKET SocketOps::Connect(
 	}
 	catch(const std::exception&) {
 		SocketOps::Close(s); // Close socket handle, if valid
-		std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception connecting client socket"));
+		std::throw_with_nested(FORMAT_RUNTIME_ERROR("Client socket connection failed"));
 	}
 }
 // SocketOps::ConnectAsync: Initiate outbound connection in nonblocking mode
@@ -484,7 +516,7 @@ _Check_return_ inline SOCKET SocketOps::ConnectAsync(
 	}
 	catch(const std::exception&) {
 		SocketOps::Close(s); // Close socket handle, if valid
-		std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception connecting client socket"));
+		std::throw_with_nested(FORMAT_RUNTIME_ERROR("Client socket connection failed"));
 	}
 }
 // SocketOps::PollConnect: Check if asynchronous connection has completed
@@ -513,7 +545,7 @@ _Check_return_ inline SocketOps::Result SocketOps::PollConnect(SOCKET s, _Inout_
 			return Result::Failed;
 		}
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception polling client socket connection"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Client socket connection polling failed"));}
 }
 // SocketOps::WaitEvent: Wait up to "Timeout" milliseconds for activity on input session socket
 _Check_return_ inline SocketOps::Result SocketOps::WaitEvent(
@@ -532,7 +564,7 @@ _Check_return_ inline SocketOps::Result SocketOps::WaitEvent(
 		}
 		else return sel > 0 ? Result::OK : Result::Timeout;
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception waiting for socket activity"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Socket activity wait failed"));}
 }
 // SocketOps::Send: Deliver data to session socket
 _Check_return_ inline SocketOps::Result SocketOps::Send(
@@ -566,7 +598,7 @@ _Check_return_ inline SocketOps::Result SocketOps::Send(
 		SocketOps::Shutdown(s);
 		return rc;
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception sending data"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Data send failed"));}
 }
 // SocketOps::ReadExact: Read a specific number of bytes from session socket
 _Check_return_ inline SocketOps::Result SocketOps::ReadExact(
@@ -595,7 +627,7 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadExact(
 		else if(iBytesRead >= iBytesToRead) return Result::OK;
 		// (else continue below...)
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception reading inbound bytes"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Inbound data read failed"));}
 
 	// If this point is reached, no error occurred but not all bytes received; re-call this function, adjusted for
 	// bytes that were read and time that has elapsed (performed outside try/catch to avoid recursive exceptions)
@@ -607,11 +639,11 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadExact(
 // SocketOps::ReadAvailable: Read bytes currently available on session socket, up to MaxBytes
 _Check_return_ inline SocketOps::Result SocketOps::ReadAvailable(
 	SOCKET s, _Out_writes_(MaxBytes) char* Tgt, size_t MaxBytes, size_t& BytesRead, _Inout_opt_ std::string* LastErrString) {
+	BytesRead = 0;
 	// Validate inputs, default outputs:
 	if(s == INVALID_SOCKET) return Result::InvalidSocket;
 	else if(Tgt == nullptr || ValueOps::Is(MaxBytes).InRangeLeft(1, INT_MAX) == false) return Result::InvalidArg;
 	else if(LastErrString) LastErrString->clear();
-	BytesRead = 0;
 	try {
 		// Attempt to read up to specified number of bytes (conversion to int guaranteed safe by above check):
 		const int br = recv(s, Tgt, gsl::narrow_cast<int>(MaxBytes), 0);
@@ -623,17 +655,17 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadAvailable(
 		BytesRead = br; // br is guaranteed to be positive value
 		return Result::OK;
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception reading available data"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Available data read failed"));}
 }
 // SocketOps::ReadPacket: Read a two-byte length header followed by the indicated number of bytes (up to MaxBytes)
 _Check_return_ inline SocketOps::Result SocketOps::ReadPacket(
 	SOCKET s, _Out_writes_(MaxBytes) char* Tgt, size_t MaxBytes, size_t& BytesRead, int Timeout, SocketFlags Flags,
 	_Inout_opt_ std::string* LastErrString) {
+	BytesRead = 0;
 	// Validate inputs, default outputs:
 	if(s == INVALID_SOCKET) return Result::InvalidSocket;
 	else if(Tgt == nullptr || ValueOps::Is(MaxBytes).InRangeLeft(4, INT_MAX) == false) return Result::InvalidArg;
 	else if(LastErrString) LastErrString->clear();
-	BytesRead = 0;
 	try {
 		// Read incoming packet header (2 bytes, or 4 if extended header enabled); return if read fails:
 		const TimeClock EndTime(Timeout);
@@ -653,10 +685,12 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadPacket(
 		if((rc = ReadExact(s, Tgt, PacketSize, TimeClock::Now().MSecTill(EndTime), LastErrString)) == Result::OK) BytesRead = PacketSize;
 		return rc;
 	}
-	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Exception reading packet"));}
+	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Packet read failed"));}
 }
+#pragma endregion SocketOps
 
 //==========================================================================================================================
+#pragma region SocketOps::ServerSocket
 // ServerSocket::Open: Use SocketOps static function to initialize socket member
 _Check_return_ inline bool SocketOps::ServerSocket::Open(unsigned short ListenPort, _In_opt_z_ const char* Interface, int Backlog) {
 	return (SocketHandle != INVALID_SOCKET) ? true
@@ -669,73 +703,82 @@ _Check_return_ inline SocketOps::Result SocketOps::ServerSocket::WaitEvent(int T
 // ServerSocket::Accept: Use SocketOps static function to accept connection on socket member
 // - If server has TLS credentials, performs TLS session negotiation on new connection before returning
 _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::ServerSocket::Accept(
-	_Inout_opt_ sockaddr_in* saddr, int TLSTimeout, size_t TLSReadBufferSize, bool TLSBufferedRead) {
+	_Inout_opt_ sockaddr_in* saddr, int TLSTimeout, size_t TLSBufferSize) {
 	// Create new SessionSocket object, passing along TLS values (if provided)
-	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSReadBufferSize, TLSBufferedRead);
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
 	// Attempt to accept incoming connection, storing handle in object; perform TLS negotiation if required:
 	sp->SocketHandle = SocketOps::Accept(SocketHandle, saddr, &(sp->LastErrString));
 	if(sp->SocketValid() && UsingTLS) {
-		if(ResultOK(TLSNegotiate(sp, TLSTimeout)) == false) {} // TODO: HANDLE THIS - SHUTDOWN SOCKET (unless handler does...?)
+		if(ResultOK(TLSNegotiate(sp, TLSTimeout)) == false) sp->Close();
 	}
 	return sp;
 }
+#pragma endregion SocketOps::ServerSocket
 
 //==========================================================================================================================
+#pragma region SocketOps::SessionSocket
 // SessionSocket::Connect: Static function to construct SessionSocket object and attempt outbound client connection
 // - If TLS is required and connection succeeds, performs TLS session negotiation on new connection before returning
 _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::Connect(
-	_In_z_ const char* RemoteIP, unsigned short RemotePort, bool UsingTLS, size_t ReadBufferSize, bool BufferedRead, int Timeout) {
+	_In_z_ const char* RemoteIP, unsigned short RemotePort, int Timeout,
+	bool UsingTLS, const std::string& TLSMethod, size_t TLSBufferSize) {
 	const TimeClock EndTime(Timeout);
 	// Create new SessionSocket object, passing along TLS values (if provided)
-	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, ReadBufferSize, BufferedRead);
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
 	// Attempt connection to remote, storing handle in object; perform TLS negotiation if required:
 	sp->SocketHandle = SocketOps::Connect(RemoteIP, RemotePort, Timeout, &(sp->LastErrString));
 	if(sp->SocketValid() && UsingTLS) {
-		sp->TLSNegotiate(ValueOps::MinZero(TimeClock::Now().MSecTill(EndTime)));
+		if(ResultOK(sp->TLSNegotiate(ValueOps::MinZero(TimeClock::Now().MSecTill(EndTime)), TLSMethod)) == false)
+			sp->Close();
 	}
 	return sp;
 }
 _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::ConnectAsync(
-	_In_z_ const char* RemoteIP, unsigned short RemotePort,	bool UsingTLS, size_t ReadBufferSize, bool BufferedRead) {
+	_In_z_ const char* RemoteIP, unsigned short RemotePort,	bool UsingTLS, size_t TLSBufferSize) {
 	// Create new SessionSocket object, passing along TLS values (if provided)
-	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, ReadBufferSize, BufferedRead);
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
 	// Initiate connection request to remote, storing handle in object:
 	sp->SocketHandle = SocketOps::ConnectAsync(RemoteIP, RemotePort, &(sp->LastErrString));
 	return sp;
 }
 // SessionSocket::PollConnect: Check if asynchronous connection has completed, perform TLS negotiation if required
-_Check_return_ inline SocketOps::Result SocketOps::SessionSocket::PollConnect(int TLSTimeout) {
-	const Result rc = SocketOps::PollConnect(SocketHandle, &LastErrString);
+_Check_return_ inline SocketOps::Result SocketOps::SessionSocket::PollConnect(int TLSTimeout, const std::string& TLSMethod) {
+	Result rc = SocketOps::PollConnect(SocketHandle, &LastErrString);
 	if(ResultOK(rc) && UsingTLS) {
-		TLSNegotiate(TLSTimeout); // TODO: RECHECK STATUS OF SOCKET AFTER THIS - RESET rc IF NEEDED
+		if(ResultOK((rc = TLSNegotiate(TLSTimeout, TLSMethod))) == false) Close();
 	}
 	return rc;
 }
 // SessionSocket::WaitEvent: Use SocketOps static function to perform wait against socket member
 // - Checks read buffers (if any) prior to waiting on socket - returns OK immediately if buffered data available
 _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::WaitEvent(int Timeout) const {
-	if(PacketBuf.get() ? (PacketBufBytes > 0) : false) return Result::OK;
+	if(ClearBuf.get() ? (ClearBufBytes > 0) : false) return Result::OK;
 	else if(ReadBuf.get() ? (ReadBufBytes > 0) : false) return Result::OK;
 	else return SocketOps::WaitEvent(SocketHandle, Timeout, &LastErrString);
 }
+// SessionSocket::Send: Deliver data to open session
 _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::Send(_In_reads_(len) const char* buf, size_t len) {
 	return UsingTLS ? SendTLS(buf, len)
 		: SocketOps::Send(SocketHandle, buf, len, &LastErrString);
 }
+// SessionSocket::ReadExact: Read the specified number of bytes from open session
 _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::ReadExact(
 	_Out_writes_(BytesToRead) char* Tgt, size_t BytesToRead, int Timeout) {
 	return UsingTLS ? ReadExactTLS(Tgt, BytesToRead, Timeout)
 		: SocketOps::ReadExact(SocketHandle, Tgt, BytesToRead, Timeout, &LastErrString);
 }
+// SessionSocket::ReadAvailable: Read up to specified number of bytes from data currently available on open session
 _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::ReadAvailable(
 	_Out_writes_(MaxBytes) char* Tgt, size_t MaxBytes, size_t& BytesRead) {
 	return UsingTLS ? ReadAvailableTLS(Tgt, MaxBytes, BytesRead)
 		: SocketOps::ReadAvailable(SocketHandle, Tgt, MaxBytes, BytesRead, &LastErrString);
 }
+// SessionSocket::ReadPacket: Read two-byte length header followed by data from open session
 _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::ReadPacket(
 	_Out_writes_(MaxBytes) char* Tgt, size_t MaxBytes, size_t& BytesRead, int Timeout) {
-	return UsingTLS ? ReadPacket(Tgt, MaxBytes, BytesRead, Timeout)
+	return UsingTLS ? ReadPacketTLS(Tgt, MaxBytes, BytesRead, Timeout)
 		: SocketOps::ReadPacket(SocketHandle, Tgt, MaxBytes, BytesRead, Timeout, SessionFlags, &LastErrString);
 }
+#pragma endregion SocketOps::SessionSocket
 
 } // (end namespace FIQCPPBASE)
