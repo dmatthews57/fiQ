@@ -84,18 +84,41 @@ LONG Exceptions::UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep) {
 // then recursively throw until no longer nested
 namespace FIQCPPBASE {
 	namespace Exceptions {
-		void AddExceptionToMap(std::map<int,std::string>& Tgt, const std::exception& e, int depth) {
-			Tgt.insert(std::map<int,std::string>::value_type(depth, e.what()));
-			try {
-				std::rethrow_if_nested(e);
+		void AddExceptionToMap(std::map<unsigned char,std::string>& Tgt, const std::exception& e, unsigned char depth) {
+			Tgt.emplace(depth, e.what());
+			if(depth < 255) { // Should never need to exceed this value
+				try {
+					std::rethrow_if_nested(e);
+				}
+				catch(const std::exception& ee) {AddExceptionToMap(Tgt, ee, ++depth);}
 			}
-			catch(const std::exception& ee) {AddExceptionToMap(Tgt, ee, ++depth);}
 		}
 	}
 }
-// UnrollExceptions: Unroll nexted exceptions into a map of strings indexed by depth
-_Check_return_ std::map<int,std::string> Exceptions::UnrollExceptions(const std::exception& e) {
-	std::map<int,std::string> retval;
+// UnrollExceptionMap: Unroll nested exceptions into a map of strings indexed by depth
+_Check_return_ std::map<unsigned char,std::string> Exceptions::UnrollExceptionMap(const std::exception& e) noexcept {
+	std::map<unsigned char,std::string> retval;
 	Exceptions::AddExceptionToMap(retval, e, 0);
 	return retval;
 }
+// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
+_Check_return_ std::string Exceptions::UnrollExceptionString(const std::exception& e) noexcept {
+
+	// Start by unrolling exceptions into map:
+	std::map<unsigned char,std::string> exmap;
+	Exceptions::AddExceptionToMap(exmap, e, 0);
+
+	// Now concatenate map entries into string:
+	std::string retval;
+	char temp[20] = { '\n', '\t', 0 }; size_t templen = 2;
+	for(auto seek = exmap.crbegin(); seek != exmap.crend(); ++seek, templen = 2) {
+		// Add newline, tab, depth and space (format local temp buffer first before appending
+		// to string to cut down on string reallocations):
+		templen += StringOps::Decimal::FlexWriteString(temp + 2, seek->first);
+		temp[templen++] = ' ';
+		retval.append(temp, templen);
+		retval.append(seek->second);
+	}
+	return retval;
+}
+

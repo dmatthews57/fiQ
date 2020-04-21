@@ -82,7 +82,7 @@ public:
 		return Exponent < _countof(PowersOf10) ? PowersOf10[Exponent] : 0;
 	}
 	// Common math functions - Integral value with minimum zero (i.e. treat negatives as zero)
-	template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> > >
+	template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
 	_Check_return_ static constexpr T MinZero(T t) noexcept {return (t > 0 ? t : 0);}
 	// Common math functions - Return value within specified upper and lower boundary:
 	template<typename T>

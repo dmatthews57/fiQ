@@ -72,11 +72,11 @@ private:
 	struct valid_type : std::false_type {};	// Catch-all definition, default to false
 	// Partial specialization for enum values - allow if underlying type is arithmetic
 	template<typename T>
-	struct valid_type<T, typename std::enable_if_t<std::is_enum_v<T> > >
-		: std::is_arithmetic<typename std::underlying_type_t<T> > {};
+	struct valid_type<T, typename std::enable_if_t<std::is_enum_v<T>>>
+		: std::is_arithmetic<typename std::underlying_type_t<T>> {};
 	// Partial specialization for arithmetic values (all allowed)
 	template<typename T>
-	struct valid_type<T, typename std::enable_if_t<std::is_arithmetic_v<T> > > : std::true_type {};
+	struct valid_type<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> : std::true_type {};
 	// Partial specializations for specific allowed non-arithmetic types
 	template<>
 	struct valid_type<_timeb> : std::true_type {};

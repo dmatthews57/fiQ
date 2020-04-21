@@ -14,7 +14,7 @@ public:
 	//======================================================================================================================
 	// Static logging functions - Log to console (stdout)
 	// - Expects string literal format followed by variable arguments; will add timestamp and output in standard format
-	template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> >, typename ... Args >
+	template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0, typename ... Args >
 	static void StdOutLog(_In_z_ _Printf_format_string_ T (&format)[len], Args const & ... args) {
 		static_assert(len > 0, "Invalid format string length");
 		const TimeClock CurrTime = TimeClock::Now(); tm TempTM = {0}; localtime_s(&TempTM, &CurrTime.GetSeconds());
@@ -26,7 +26,7 @@ public:
 	}
 	// Static logging functions - Log to console (stderr)
 	// - Expects string literal format followed by variable arguments; will add timestamp and output in standard format
-	template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> >, typename ... Args >
+	template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0, typename ... Args >
 	static void StdErrLog(_In_z_ _Printf_format_string_ T (&format)[len], Args const & ... args) {
 		static_assert(len > 0, "Invalid format string length");
 		const TimeClock CurrTime = TimeClock::Now(); tm TempTM = {0}; localtime_s(&TempTM, &CurrTime.GetSeconds());

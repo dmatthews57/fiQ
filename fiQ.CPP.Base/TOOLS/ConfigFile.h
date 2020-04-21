@@ -30,24 +30,24 @@ public:
 		//==================================================================================================================
 		// GetNamed accessors: Retrieve entry with the specified name in various formats
 		// - Each function provides versions taking string literal names (faster) or std::string-constructible names
-		template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+		template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 		_Check_return_ std::string GetNamedString(_In_reads_z_(len - 1) T (&name)[len]) const;
 		_Check_return_ std::string GetNamedString(const std::string& name) const;
 		template<size_t MaxToks, typename T, size_t len, typename...Args,
-			typename = std::enable_if_t<std::is_same_v<T, const char> > >
+			std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 		_Check_return_ Tokenizer GetNamedTokenizer(_In_reads_z_(len - 1) T (&name)[len], Args&&...delimiter) const;
 		template<size_t MaxToks, typename...Args>
 		_Check_return_ Tokenizer GetNamedTokenizer(const std::string& name, Args&&...delimiter) const;
-		template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+		template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 		_Check_return_ int GetNamedInt(_In_reads_z_(len - 1) T (&name)[len]) const;
 		_Check_return_ int GetNamedInt(const std::string& name) const;
-		template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+		template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 		_Check_return_ unsigned short GetNamedUShort(_In_reads_z_(len - 1) T (&name)[len]) const;
 		_Check_return_ unsigned short GetNamedUShort(const std::string& name) const;
-		template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+		template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 		_Check_return_ unsigned long long GetNamedHex(_In_reads_z_(len - 1) T (&name)[len]) const;
 		_Check_return_ unsigned long long GetNamedHex(const std::string& name) const;
-		template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+		template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 		_Check_return_ bool GetNamedBool(_In_reads_z_(len - 1) T (&name)[len]) const;
 		_Check_return_ bool GetNamedBool(const std::string& name) const;
 
@@ -77,7 +77,7 @@ public:
 		// - Arguments are relayed directly to std::string constructor (enable_if required to ensure that compiler selects
 		//   appropriate constructors for non-string argument types)
 		template<typename...Args,
-			typename = std::enable_if_t<std::is_constructible_v<std::string, Args...> > >
+			std::enable_if_t<std::is_constructible_v<std::string, Args...>, int> = 0>
 		ConfigSection(ConfigFile::pass_key, Args&&...args) : SectionName(std::forward<Args>(args)...) {}
 		// Deleted copy/move constructors and assignment operators
 		ConfigSection() = delete;
@@ -137,7 +137,7 @@ public:
 	_Check_return_ bool Initialize(_In_z_ const char* FileName);
 	// GetSection: Retrieve section with specified name (case-insensitive), string literal version
 	// - Will return nullptr if section not found
-	template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+	template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 	_Check_return_ SectionPtr GetSection(_In_reads_z_(len - 1) T (&SectionName)[len]) const;
 	// GetSection: Retrieve section with specified name (case-insensitive), string version
 	// - Will return nullptr if section not found
@@ -225,7 +225,7 @@ _Check_return_ inline ConfigFile::ConfigSection::StrLenPair ConfigFile::ConfigSe
 	return { nullptr, 0 };
 }
 // ConfigSection::GetNamedString: Retrieve string parameter with the specified name (string literal version)
-template<typename T, size_t len, typename>
+template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline std::string ConfigFile::ConfigSection::GetNamedString(_In_reads_z_(len - 1) T (&name)[len]) const {
 	const StrLenPair retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0) ? std::string(retval.first, retval.second) : EmptyStr();
@@ -236,7 +236,7 @@ _Check_return_ inline std::string ConfigFile::ConfigSection::GetNamedString(cons
 	return (retval.first != nullptr && retval.second > 0) ? std::string(retval.first, retval.second) : EmptyStr();
 }
 // ConfigSection::GetNamedTokenizer: Retrieve tokenized string parameter with the specified name (string literal version)
-template<size_t MaxToks, typename T, size_t len, typename...Args, typename>
+template<size_t MaxToks, typename T, size_t len, typename...Args, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline Tokenizer ConfigFile::ConfigSection::GetNamedTokenizer(
 	_In_reads_z_(len - 1) T (&name)[len], Args&&...delimiter) const {
 	const StrLenPair retval = GetNamedConfig(name, len - 1);
@@ -250,7 +250,7 @@ _Check_return_ inline Tokenizer ConfigFile::ConfigSection::GetNamedTokenizer(
 	return Tokenizer::CreateCopy<MaxToks>(retval.first, retval.second, std::forward<Args>(delimiter)...);
 }
 // ConfigSection::GetNamedInt: Retrieve integer parameter with the specified name (string literal version)
-template<typename T, size_t len, typename>
+template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline int ConfigFile::ConfigSection::GetNamedInt(_In_reads_z_(len - 1) T (&name)[len]) const {
 	const StrLenPair retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Decimal::FlexReadString(retval.first, retval.second) : 0;
@@ -261,7 +261,7 @@ _Check_return_ inline int ConfigFile::ConfigSection::GetNamedInt(const std::stri
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Decimal::FlexReadString(retval.first, retval.second) : 0;
 }
 // ConfigSection::GetNamedUShort: Retrieve unsigned short parameter with the specified name (string literal version)
-template<typename T, size_t len, typename>
+template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline unsigned short ConfigFile::ConfigSection::GetNamedUShort(_In_reads_z_(len - 1) T (&name)[len]) const {
 	const StrLenPair retval = GetNamedConfig(name, len - 1);
 	if(retval.first != nullptr && retval.second > 0) {
@@ -280,7 +280,7 @@ _Check_return_ inline unsigned short ConfigFile::ConfigSection::GetNamedUShort(c
 	else return 0;
 }
 // ConfigSection::GetNamedHex: Retrieve unsigned integer from hex string parameter with the specified name (string literal version)
-template<typename T, size_t len, typename>
+template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline unsigned long long ConfigFile::ConfigSection::GetNamedHex(_In_reads_z_(len - 1) T (&name)[len]) const {
 	const StrLenPair retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Ascii::FlexReadString(retval.first, retval.second) : 0;
@@ -292,7 +292,7 @@ _Check_return_ inline unsigned long long ConfigFile::ConfigSection::GetNamedHex(
 }
 // ConfigSection::GetNamedBool: Retrieve boolean parameter with the specified name (string literal version)
 // - Bases decision on first character only, as determined by BoolParm utility function
-template<typename T, size_t len, typename>
+template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline bool ConfigFile::ConfigSection::GetNamedBool(_In_reads_z_(len - 1) T (&name)[len]) const {
 	const StrLenPair retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0 ? BoolParm(retval.first[0]) : false);
@@ -306,7 +306,7 @@ _Check_return_ inline bool ConfigFile::ConfigSection::GetNamedBool(const std::st
 
 //==========================================================================================================================
 // ConfigFile::GetSection: Retrieve ConfigSection object with the specified name
-template<typename T, size_t len, typename>
+template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline ConfigFile::SectionPtr ConfigFile::GetSection(_In_reads_z_(len - 1) T (&SectionName)[len]) const {
 	constexpr size_t namelen = len - 1;
 	std::deque<std::shared_ptr<ConfigSection> >::const_iterator cSeek = ConfigSections.cbegin(), cEnd = ConfigSections.cend();

@@ -45,8 +45,8 @@ namespace fiQCPPBaseTESTS
 			Assert::IsTrue(Server->Open(11223), (L"Open: " + StringOps::ConvertToWideString(Server->GetLastErrString())).c_str());
 
 			// Start client socket connection:
-			ClientSession = SocketOps::SessionSocket::ConnectAsync("127.0.0.1", 11223);
-			Assert::IsTrue(ClientSession->SocketValid(), (L"ConnectAsync: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+			ClientSession = SocketOps::SessionSocket::StartConnect("127.0.0.1", 11223);
+			Assert::IsTrue(ClientSession->SocketValid(), (L"StartConnect: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Wait for and accept connection request on server:
 			Assert::AreEqual(SocketOps::Result::OK, Server->WaitEvent(10), StringOps::ConvertToWideString(Server->GetLastErrString()).c_str());
@@ -97,8 +97,8 @@ namespace fiQCPPBaseTESTS
 			Assert::IsTrue(Server->InitCredentialsFromStore("localhost", "", false), (L"InitCredentials: " + StringOps::ConvertToWideString(Server->GetLastErrString())).c_str());
 
 			// Start client socket connection:
-			ClientSession = SocketOps::SessionSocket::ConnectAsync("127.0.0.1", 11223, true);
-			Assert::IsTrue(ClientSession->SocketValid(), (L"ConnectAsync: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+			ClientSession = SocketOps::SessionSocket::StartConnect("127.0.0.1", 11223, true);
+			Assert::IsTrue(ClientSession->SocketValid(), (L"StartConnect: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Wait for and accept connection request on server:
 			Assert::AreEqual(SocketOps::Result::OK, Server->WaitEvent(10), (L"Server wait: " + StringOps::ConvertToWideString(Server->GetLastErrString())).c_str());

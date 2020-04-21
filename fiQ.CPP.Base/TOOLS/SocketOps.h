@@ -75,10 +75,10 @@ public:
 	// - Returns connected SOCKET value or INVALID_SOCKET on error
 	_Check_return_ static SOCKET Connect(_In_z_ const char* RemoteIP, unsigned short RemotePort, int Timeout = 0,
 		_Inout_opt_ std::string* LastErrString = nullptr);
-	// ConnectAsync: As Connect, but will attempt nonblocking connection and return immediately
+	// StartConnect: As Connect, but will attempt nonblocking connection and return immediately
 	// - Use PollConnect to check back to determine whether it has successfully connected
 	// - Returns connect-in-progress SOCKET value or INVALID_SOCKET on error
-	_Check_return_ static SOCKET ConnectAsync(_In_z_ const char* RemoteIP, unsigned short RemotePort,
+	_Check_return_ static SOCKET StartConnect(_In_z_ const char* RemoteIP, unsigned short RemotePort,
 		_Inout_opt_ std::string* LastErrString = nullptr);
 	_Check_return_ static Result PollConnect(SOCKET s,
 		_Inout_opt_ std::string* LastErrString = nullptr);
@@ -198,7 +198,7 @@ public:
 		// Public named constructors (client mode only, performs outbound connection attempt)
 		_Check_return_ static SessionSocketPtr Connect(_In_z_ const char* RemoteIP, unsigned short RemotePort, int Timeout = 0,
 			bool UsingTLS = false, const std::string& TLSMethod = "", size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
-		_Check_return_ static SessionSocketPtr ConnectAsync(_In_z_ const char* RemoteIP, unsigned short RemotePort,
+		_Check_return_ static SessionSocketPtr StartConnect(_In_z_ const char* RemoteIP, unsigned short RemotePort,
 			bool UsingTLS = false, size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
 
 		//==================================================================================================================
@@ -478,9 +478,9 @@ _Check_return_ inline SOCKET SocketOps::Connect(
 		std::throw_with_nested(FORMAT_RUNTIME_ERROR("Client socket connection failed"));
 	}
 }
-// SocketOps::ConnectAsync: Initiate outbound connection in nonblocking mode
+// SocketOps::StartConnect: Initiate outbound connection in nonblocking mode
 GSL_SUPPRESS(type.1) // reinterpret_cast is preferable to C-style cast (required for calls to bind() and connect())
-_Check_return_ inline SOCKET SocketOps::ConnectAsync(
+_Check_return_ inline SOCKET SocketOps::StartConnect(
 	_In_z_ const char* RemoteIP, unsigned short RemotePort, _Inout_opt_ std::string* LastErrString) {
 	// Validate inputs, default outputs:
 	if((RemoteIP ? RemoteIP[0] : 0) == 0 || RemotePort == 0) {
@@ -733,12 +733,12 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::Conn
 	}
 	return sp;
 }
-_Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::ConnectAsync(
+_Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::StartConnect(
 	_In_z_ const char* RemoteIP, unsigned short RemotePort,	bool UsingTLS, size_t TLSBufferSize) {
 	// Create new SessionSocket object, passing along TLS values (if provided)
 	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
 	// Initiate connection request to remote, storing handle in object:
-	sp->SocketHandle = SocketOps::ConnectAsync(RemoteIP, RemotePort, &(sp->LastErrString));
+	sp->SocketHandle = SocketOps::StartConnect(RemoteIP, RemotePort, &(sp->LastErrString));
 	return sp;
 }
 // SessionSocket::PollConnect: Check if asynchronous connection has completed, perform TLS negotiation if required

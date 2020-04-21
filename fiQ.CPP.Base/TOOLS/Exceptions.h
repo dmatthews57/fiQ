@@ -45,8 +45,10 @@ namespace FIQCPPBASE {
 		// - Usage: SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 		LONG UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep);
 
-		// UnrollExceptions: Unroll nexted exceptions into a map of strings indexed by depth
-		_Check_return_ std::map<int,std::string> UnrollExceptions(const std::exception& e);
+		// UnrollExceptionMap: Unroll nested exceptions into a map of strings indexed by depth
+		_Check_return_ std::map<unsigned char,std::string> UnrollExceptionMap(const std::exception& e) noexcept;
+		// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
+		_Check_return_ std::string UnrollExceptionString(const std::exception& e) noexcept;
 
 	} // (end namespace Exceptions)
 

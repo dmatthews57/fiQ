@@ -113,13 +113,13 @@ private:
 	};
 	//======================================================================================================================
 	// Comparison retrieval function: Build CompStr object from string literal:
-	template<typename T, size_t len, typename = std::enable_if_t<(std::is_same_v<T, const char> && len > 2)> >
+	template<typename T, size_t len, std::enable_if_t<(std::is_same_v<T, const char> && len > 2), int> = 0>
 	constexpr static auto GetComp(T (&buf)[len]) {return CompStr<len - 1>(buf);}
 	// Comparison retrieval function: Build CompChar object from one-character string literal:
-	template<typename T, size_t len, typename = void, typename = std::enable_if_t<(std::is_same_v<T, const char> && len == 2)> >
+	template<typename T, size_t len, std::enable_if_t<(std::is_same_v<T, const char> && len == 2), int> = 0>
 	constexpr static auto GetComp(T (&buf)[len]) {return CompChar(buf[0]);}
 	// Comparison retrieval function: Build CompChar object from single character (allows any integral input type):
-	template<typename T, typename = std::enable_if_t<std::is_integral_v<T> > >
+	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 	constexpr static auto GetComp(T c) {return CompChar(gsl::narrow_cast<char>(c));}
 	// Comparison retrieval function: Default implementation builds CompChar object with comma:
 	constexpr static auto GetComp() {return CompChar(',');}
