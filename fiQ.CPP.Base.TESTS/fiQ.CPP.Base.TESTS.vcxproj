@@ -163,6 +163,7 @@
     <ClCompile Include="TOOLS\SerialOps.cpp" />
     <ClCompile Include="TOOLS\SocketOps.cpp" />
     <ClCompile Include="TOOLS\StringOps.cpp" />
+    <ClCompile Include="TOOLS\ThreadOps.cpp" />
     <ClCompile Include="TOOLS\TimeClock.cpp" />
     <ClCompile Include="TOOLS\Tokenizer.cpp" />
     <ClCompile Include="TOOLS\ValueOps.cpp" />

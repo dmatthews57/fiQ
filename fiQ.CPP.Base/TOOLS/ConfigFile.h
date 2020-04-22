@@ -3,8 +3,8 @@
 // ConfigFile.h : Classes for loading and accessing configuration files
 //==========================================================================================================================
 
-#include "StringOps.h"
-#include "Tokenizer.h"
+#include "Tools/StringOps.h"
+#include "Tools/Tokenizer.h"
 
 namespace FIQCPPBASE {
 

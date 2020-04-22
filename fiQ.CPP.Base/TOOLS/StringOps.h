@@ -3,7 +3,7 @@
 // StringOps.h : Classes and functions for performing string operations
 //==========================================================================================================================
 
-#include "ValueOps.h"
+#include "Tools/ValueOps.h"
 
 namespace FIQCPPBASE {
 
@@ -39,7 +39,7 @@ public:
 	// - Returns number of bytes written to Tgt (always compile-time input array size, minus null terminator)
 	// - If return value not required, use StrCpyLiteral instead
 	// - Can be tricked into accepting const char array, but will copy bytes based on compile-time array size and NOT string length
-	template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+	template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 	_Check_return_ static constexpr size_t ExStrCpyLiteral(_Out_writes_all_(len - 1) char* Tgt, _In_reads_z_(len - 1) T (&buf)[len]) {
 		return memcpy(Tgt, buf, len - 1), len - 1;
 	}
@@ -71,7 +71,7 @@ public:
 	// StrCpyLiteral: Version of StrCpy accepting a string literal (calculates length automatically)
 	// - Includes source null terminator in copy (meaning Tgt must be at least as large as compile-time array size, including null)
 	// - Can be tricked into accepting const char array, but will blindly copy compile-time array size bytes - just use memcpy instead
-	template<typename T, size_t len, typename = std::enable_if_t<std::is_same_v<T, const char> > >
+	template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int> = 0>
 	static constexpr void StrCpyLiteral(_Out_writes_all_(len) char* Tgt, _In_reads_z_(len) T (&buf)[len]) {
 		memcpy(Tgt, buf, len);
 	}
@@ -81,10 +81,10 @@ public:
 	class Decimal {
 	public:
 		// Char: Safely provide ASCII character for lowest digit of any UNSIGNED integral value
-		template<typename T, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> > >
+		template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0>
 		_Check_return_ static constexpr char Char(T t) noexcept {return DECTAB[t % 10];}
 		// Char: Safely provide ASCII character for lowest digit of any SIGNED integral value
-		template<typename T, typename = void, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> > >
+		template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
 		_Check_return_ static constexpr char Char(T t) noexcept {
 			return DECTAB[static_cast<std::make_unsigned_t<T> >(t < 0 ? -t : t) % 10];
 		}
@@ -93,12 +93,12 @@ public:
 			return ValueOps::Is(c).InRange('0','9');
 		}
 		// Digits: Returns the total number of characters required to represent an UNSIGNED integral value at compile time
-		template<typename T, T t, typename = std::enable_if_t<std::is_unsigned_v<T> > >
+		template<typename T, T t, std::enable_if_t<std::is_unsigned_v<T>, int> = 0>
 		_Check_return_ static constexpr size_t Digits() noexcept {
 			return t > 9 ? (1 + Digits<T, t / 10>()) : 1;
 		}
 		// Digits: Returns the total number of characters required to represent a SIGNED integral value at compile time
-		template<typename T, T t, typename = void, typename = std::enable_if_t<std::is_signed_v<T> > >
+		template<typename T, T t, std::enable_if_t<std::is_signed_v<T>, int> = 0>
 		_Check_return_ static constexpr size_t Digits() noexcept {
 			// If value is negative, start with one character for negative sign; convert value to t's unsigned complement
 			// plus one [required to safely flip sign on numeric_limits<T>::min()] and call unsigned version of function
@@ -117,7 +117,7 @@ public:
 		static constexpr auto MaxDigits_v = MaxDigits<T>::value;
 		// FlexDigits: Returns the total number of characters required to represent an UNSIGNED integral value at runtime
 		// - Performs brute-force comparison of compile-time factor-of-10 values
-		template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T> > >
+		template<typename T, std::enable_if_t<std::is_unsigned_v<T>, int> = 0>
 		_Check_return_ static constexpr size_t FlexDigits(T t) noexcept {
 			return t >= ValueOps::PowerOf10(19) ? 20
 				: t >= ValueOps::PowerOf10(18) ? 19
@@ -141,7 +141,7 @@ public:
 				: 1;
 		}
 		// FlexDigits: Returns the total number of characters required to represent a SIGNED integral value at runtime
-		template<typename T, typename = void, typename = std::enable_if_t<std::is_signed_v<T> > >
+		template<typename T, std::enable_if_t<std::is_signed_v<T>, int> = 0>
 		_Check_return_ static constexpr size_t FlexDigits(T t) noexcept {
 			// If value is negative, start with one character for negative sign; convert value to t's unsigned complement
 			// plus one [required to safely flip sign on numeric_limits<T>::min()] and call unsigned version of function
@@ -155,7 +155,7 @@ public:
 		// - Maximum number of characters to read is dynamically determined based on return type (excess characters ignored)
 		// - Signed version, checks for negative sign
 		// - Default return type is signed int
-		template<typename T = int, typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> > >
+		template<typename T = int, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
 		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) noexcept(false) {
 			// Maximum length to read is maximum number of digits for this type, minus one (to account for possible negative
 			// sign; note that if present, negative sign will not be counted against maximum length below):
@@ -186,7 +186,7 @@ public:
 		// - Maximum number of characters to read is dynamically determined based on return type (excess characters ignored)
 		// - Unsigned version, will treat negative number strings as invalid (i.e. will return zero)
 		// - No default return type (this function must be explicitly invoked)
-		template<typename T, typename = void, typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> > >
+		template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0>
 		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) {
 			// Default length is maximum digits, ensure user-provided value is capped
 			if(len == 0 || len > MaxDigits_v<T>) len = MaxDigits_v<T>;
@@ -208,9 +208,7 @@ public:
 		//   input value; writes one char and makes recursive call to write next character (until last iteration)
 		template<size_t len,	// Must be specified by caller
 			typename T,			// Can be dynamically determined by compiler
-			typename = std::enable_if_t<
-				std::is_integral_v<T> && std::is_unsigned_v<T> && (len > 1) && (len <= MaxDigits_v<T>)
-			>
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > 1) && (len <= MaxDigits_v<T>), int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) {
 			// Write first character, make recursive call to write next one:
@@ -223,8 +221,7 @@ public:
 		// - Always returns 1, since single character is always written
 		template<size_t len,	// Must be specified by caller (always 1)
 			typename T,			// Can be dynamically determined by compiler
-			typename = void,	// Unused placeholder argument - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1)>
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1), int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) {
 			return Tgt[0] = Char(t), 1;
@@ -236,8 +233,7 @@ public:
 		// - Returns total number of bytes written (always len)
 		template<size_t len,	// Must be specified by caller
 			typename T,			// Can be dynamically determined by compiler
-			typename = void, typename = void,	// Unused placeholder arguments - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > MaxDigits_v<T>)>
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > MaxDigits_v<T>), int> = 0
 		>
 		static size_t ExWriteString(_Pre_writable_size_(len) char* Tgt, T t) {
 			// Add number of zeroes we will be writing to return value (deduct this value from bytes to be written by
@@ -253,8 +249,7 @@ public:
 		// - Returns total number of bytes written (always len)
 		template<size_t len,	// Must be specified by caller
 			typename T,			// Can be dynamically determined by compiler
-			typename = void, typename = void, typename = void, // Unused placeholder arguments - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> >
+			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) {
 			return t < 0 ? (Tgt[0] = '-', 1 + ExWriteString<len - 1>(Tgt + 1, static_cast<std::make_unsigned_t<T> >(-t)))
@@ -270,7 +265,7 @@ public:
 		//   switch statement with all possible values is required since dynamic digit count not available at compile-time
 		template<typename T, // Can be dynamically determined by compiler
 			size_t MaxSize = MaxDigits_v<T>, // Allow compiler to determine this - used in annotation check below
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> >
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0
 		>
 		static size_t FlexWriteString(_Pre_writable_size_(MaxSize) char* Tgt, T t) {
 			static_assert(MaxSize == MaxDigits_v<T>, "Don't override MaxSize");
@@ -306,8 +301,7 @@ public:
 		// - Returns total number of bytes written
 		template<typename T, // Can be dynamically determined by compiler
 			size_t MaxSize = MaxDigits_v<T>, // Allow compiler to determine this - used in annotation check below
-			typename = void, // Unused placeholder argument - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> >
+			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static size_t FlexWriteString(_Pre_writable_size_(MaxSize) char* Tgt, T t) {
 			static_assert(MaxSize == MaxDigits_v<T>, "Don't override MaxSize");
@@ -322,7 +316,7 @@ public:
 		// - Returns pair with string and total number of bytes written
 		// - Brute-force method here performs better than switch'd ExWriteString calls or loop (unrolled or otherwise)
 		template<typename T, // Can be dynamically determined by compiler
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> >
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0
 		>
 		static std::pair<char*,size_t> FlexWriteString(_Out_writes_all_(ExactDigits) char* Tgt, T t, size_t ExactDigits) {
 			char *ptr = Tgt;
@@ -356,8 +350,7 @@ public:
 		// - Will left-truncate any values too large to be expressed in ExactDigits (including negative sign)
 		// - Returns pair with string and total number of bytes written
 		template<typename T, // Can be dynamically determined by compiler
-			typename = void, // Unused placeholder argument - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> >
+			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static std::pair<char*,size_t> FlexWriteString(_Out_writes_all_(ExactDigits) char* Tgt, T t, size_t ExactDigits) {
 			if(t < 0 && ExactDigits > 0) {
@@ -408,7 +401,7 @@ public:
 	class Ascii {
 	public:
 		// Char: Safely provide ASCII-equivalent character for lowest nibble of any integral type
-		template<typename T, typename = std::enable_if_t<std::is_integral_v<T> > >
+		template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 		_Check_return_ static constexpr char Char(T idx) noexcept {return ABTAB[idx & 0x0F];}
 		// IsHexChar: Check if character is an ASCII representation of a hex character (0-9, A-F)
 		_Check_return_ static constexpr bool IsHexChar(char c) noexcept {
@@ -431,13 +424,13 @@ public:
 		//==================================================================================================================
 		// ReadString: Function to read ASCII-hex string into an integral value (e.g. "12AB" becomes 0x12AB)
 		// - This overload is selected when reading two-character string (returns 8-bit unsigned char)
-		template<size_t len, typename = std::enable_if_t<len == 2> >
+		template<size_t len, std::enable_if_t<len == 2, int> = 0>
 		_Check_return_ static constexpr unsigned char ReadString(_In_reads_(len) const char* buf) {
 			return buf ? ByteToHex(buf) : 0;
 		}
 		// ReadString: Function to read ASCII-hex string into an integral value (e.g. "12AB" becomes 0x12AB)
 		// - This overload is selected when reading four-character string (returns 16-bit unsigned short)
-		template<size_t len, typename = std::enable_if_t<len == 4> >
+		template<size_t len, std::enable_if_t<len == 4, int> = 0>
 		_Check_return_ static constexpr unsigned short ReadString(_In_reads_(len) const char* buf) {
 			return buf ?
 				// Read first two characters, shift left and OR with result of recursive call for remaining bytes:
@@ -446,7 +439,7 @@ public:
 		}
 		// ReadString: Function to read ASCII-hex string into an integral value (e.g. "12AB" becomes 0x12AB)
 		// - This overload is selected when reading six- or eight-character string (returns 32-bit unsigned long)
-		template<size_t len, typename = std::enable_if_t<len == 6 || len == 8> >
+		template<size_t len, std::enable_if_t<len == 6 || len == 8, int> = 0>
 		_Check_return_ static constexpr unsigned long ReadString(_In_reads_(len) const char* buf) {
 			return buf ?
 				// Read first two characters, shift left and OR with result of recursive call for remaining bytes:
@@ -455,7 +448,7 @@ public:
 		}
 		// ReadString: Function to read ASCII-hex string into an integral value (e.g. "12AB" becomes 0x12AB)
 		// - This overload is selected when reading ten- to sixteen-character strings (returns 64-bit unsigned long long)
-		template<size_t len, typename = std::enable_if_t<len == 10 || len == 12 || len == 14 || len == 16> >
+		template<size_t len, std::enable_if_t<len == 10 || len == 12 || len == 14 || len == 16, int> = 0>
 		_Check_return_ static constexpr unsigned long long ReadString(_In_reads_(len) const char* buf) {
 			return buf ?
 				// Read first two characters, shift left and OR with result of recursive call for remaining bytes:
@@ -466,7 +459,7 @@ public:
 		// - If exact number of bytes to be read is known at compile time, use ReadString functions instead as they will unroll loop
 		// - Return type defaults to unsigned 64-bit integer
 		// - Maximum number of characters to read is dynamically determined based on return type (excess characters are ignored)
-		template<typename T = unsigned long long, typename = std::enable_if_t<std::is_unsigned_v<T> && std::is_integral_v<T> > >
+		template<typename T = unsigned long long, std::enable_if_t<std::is_unsigned_v<T> && std::is_integral_v<T>, int> = 0>
 		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) noexcept(false) {
 			constexpr size_t MaxChars = (sizeof(T) * 2);
 			// If string starts with "0x", skip ahead so long as length is dynamic (zero) or is >= 2
@@ -496,7 +489,7 @@ public:
 		//   writes one char and makes recursive call to write next character (calling terminal case on last iteration)
 		template<size_t len,	// Must be specified by caller
 			typename T,			// Can be dynamically determined by compiler
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > 1) && (len <= (sizeof(T) * 2))>
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > 1) && (len <= (sizeof(T) * 2)), int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
 			// Write first character, make recursive call to write next one:
@@ -509,8 +502,7 @@ public:
 		// - Always returns 1, since single byte is always written
 		template<size_t len,	// Must be specified by caller (always 1)
 			typename T,			// Can be dynamically determined by compiler
-			typename = void,	// Unused placeholder argument - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1)>
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1), int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) noexcept(false) {
 			return Tgt[0] = Char(Src), 1;
@@ -522,8 +514,7 @@ public:
 		// - Returns total number of bytes written (always "len")
 		template<size_t len,	// Must be specified by caller
 			typename T,			// Can be dynamically determined by compiler
-			typename = void, typename = void,	// Unused placeholder arguments - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > (sizeof(T) * 2))>
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > (sizeof(T) * 2)), int> = 0
 		>
 		static size_t ExWriteString(_Pre_writable_size_(len) char* Tgt, T Src) {
 			// Add number of zeroes we will be writing to return value (deduct this value from bytes to be written by
@@ -536,8 +527,7 @@ public:
 		// - Returns total number of bytes written (always "len")
 		template<size_t len,	// Must be specified by caller
 			typename T,			// Can be dynamically determined by compiler
-			typename = void, typename = void, typename = void,	// Unused placeholder arguments - required to make signature distinct
-			typename = std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> >
+			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
 			return ExWriteString<len>(Tgt, static_cast<std::make_unsigned_t<T> >(Src));

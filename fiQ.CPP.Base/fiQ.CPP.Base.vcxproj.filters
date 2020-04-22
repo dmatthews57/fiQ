@@ -33,9 +33,6 @@
     <ClInclude Include="TOOLS\FileOps.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
-    <ClInclude Include="TOOLS\Logger.h">
-      <Filter>Header Files\Tools</Filter>
-    </ClInclude>
     <ClInclude Include="TOOLS\SerialOps.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
@@ -58,6 +55,9 @@
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
     <ClInclude Include="TOOLS\ThreadOps.h">
+      <Filter>Header Files\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="TOOLS\LoggingOps.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
   </ItemGroup>

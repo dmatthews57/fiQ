@@ -3,7 +3,7 @@
 // Tokenizer.h : Class for performing string tokenization
 //==========================================================================================================================
 
-#include "ValueOps.h"
+#include "Tools/ValueOps.h"
 
 namespace FIQCPPBASE {
 

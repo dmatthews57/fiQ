@@ -6,7 +6,7 @@
 #include <comdef.h>
 #include <errhandlingapi.h>
 #include <stdexcept>
-#include "StringOps.h"
+#include "Tools/StringOps.h"
 
 // FORMAT_RUNTIME_ERROR: Helper macro for producing runtime_error object with information on throw site
 // - Requires use of macro rather than inline function so that FILE and FUNCTION macros work as expected

@@ -1,13 +1,13 @@
 #pragma once
 //==========================================================================================================================
-// Logger.h : Classes and functions for application logging
+// LoggingOps.h : Classes and functions for application logging
 //==========================================================================================================================
 
-#include "TimeClock.h"
+#include "Tools/TimeClock.h"
 
 namespace FIQCPPBASE {
 
-class Logger
+class LoggingOps
 {
 public:
 

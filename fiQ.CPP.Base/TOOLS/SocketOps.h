@@ -609,12 +609,12 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadExact(
 	else if(LastErrString) LastErrString->clear();
 
 	// Set end time, convert bytes to read to int (guaranteed safe by above check):
-	const TimeClock EndTime(Timeout);
+	const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 	const int iBytesToRead = gsl::narrow_cast<int>(BytesToRead);
 	int iBytesRead = 0;
 	try {
 		// Ensure data is available on socket (wait up to Timeout), if wait fails return now:
-		const Result wrc = WaitEvent(s, ValueOps::MinZero(TimeClock::Now().MSecTill(EndTime)), LastErrString);
+		const Result wrc = WaitEvent(s, Timeout, LastErrString);
 		if(wrc != Result::OK) return wrc;
 
 		// Attempt to read specified number of bytes, return on failure OR if requested number of bytes read:
@@ -633,7 +633,7 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadExact(
 	// bytes that were read and time that has elapsed (performed outside try/catch to avoid recursive exceptions)
 	return SocketOps::ReadExact(s, Tgt + iBytesRead,
 		static_cast<size_t>(iBytesToRead) - iBytesRead, // iBytesRead guaranteed to be a positive value less than iBytesToRead
-		TimeClock::Now().MSecTill(EndTime)
+		SteadyClock().MSecTill(EndTime)
 	);
 }
 // SocketOps::ReadAvailable: Read bytes currently available on session socket, up to MaxBytes
@@ -668,7 +668,7 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadPacket(
 	else if(LastErrString) LastErrString->clear();
 	try {
 		// Read incoming packet header (2 bytes, or 4 if extended header enabled); return if read fails:
-		const TimeClock EndTime(Timeout);
+		const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 		Result rc = ReadExact(s, Tgt, (Flags & SocketFlags::ExtendedHeader) ? 4 : 2, Timeout, LastErrString);
 		if(rc != Result::OK) return rc;
 
@@ -682,7 +682,7 @@ _Check_return_ inline SocketOps::Result SocketOps::ReadPacket(
 		}
 
 		// Otherwise, read specified number of bytes; if successful, assign output length variable:
-		if((rc = ReadExact(s, Tgt, PacketSize, TimeClock::Now().MSecTill(EndTime), LastErrString)) == Result::OK) BytesRead = PacketSize;
+		if((rc = ReadExact(s, Tgt, PacketSize, SteadyClock().MSecTill(EndTime), LastErrString)) == Result::OK) BytesRead = PacketSize;
 		return rc;
 	}
 	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Packet read failed"));}
@@ -722,13 +722,13 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::ServerSocket::Accep
 _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::Connect(
 	_In_z_ const char* RemoteIP, unsigned short RemotePort, int Timeout,
 	bool UsingTLS, const std::string& TLSMethod, size_t TLSBufferSize) {
-	const TimeClock EndTime(Timeout);
+	const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 	// Create new SessionSocket object, passing along TLS values (if provided)
 	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
 	// Attempt connection to remote, storing handle in object; perform TLS negotiation if required:
 	sp->SocketHandle = SocketOps::Connect(RemoteIP, RemotePort, Timeout, &(sp->LastErrString));
 	if(sp->SocketValid() && UsingTLS) {
-		if(ResultOK(sp->TLSNegotiate(ValueOps::MinZero(TimeClock::Now().MSecTill(EndTime)), TLSMethod)) == false)
+		if(ResultOK(sp->TLSNegotiate(ValueOps::MinZero(SteadyClock().MSecTill(EndTime)), TLSMethod)) == false)
 			sp->Close();
 	}
 	return sp;

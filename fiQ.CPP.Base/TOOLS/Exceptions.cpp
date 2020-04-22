@@ -3,7 +3,7 @@
 //==========================================================================================================================
 #include "pch.h"
 #include "Exceptions.h"
-#include "Logger.h"
+#include "LoggingOps.h"
 using namespace FIQCPPBASE;
 
 //==========================================================================================================================
@@ -73,8 +73,9 @@ void Exceptions::StructuredExceptionTranslator(unsigned int u, _EXCEPTION_POINTE
 // UnhandledExceptionFilter: Capture any exceptions not handled by application
 LONG Exceptions::UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep) {
 	// Log exception details to stderr for debugging purposes:
-	Logger::StdErrLog("UNHANDLED EXCEPTION 0x%X: %s",
+	LoggingOps::StdErrLog("UNHANDLED EXCEPTION 0x%X in Thread ID %08X: %s",
 		ep ? (ep->ExceptionRecord ? ep->ExceptionRecord->ExceptionCode : 0) : 0,
+		GetCurrentThreadId(),
 		ep ? (ep->ExceptionRecord ? TranslateExceptionCode(ep->ExceptionRecord->ExceptionCode) : "(NULL)") : "(NULL)");
 	// Return to inform program that it should execute its default handler (which will typically terminate the process):
 	return EXCEPTION_EXECUTE_HANDLER;

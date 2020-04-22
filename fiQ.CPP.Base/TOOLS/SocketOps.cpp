@@ -247,7 +247,7 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 	LastErrString.clear();
 	try {
 		// Set up function constants - end time, end-of-buffer marker:
-		const TimeClock EndTime(Timeout);
+		const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 		const char * const EndPtr = sp->ReadBuf.get() + sp->TLSBufSize;
 
 		// Create security context initialization variables; OutBufferDesc members will remain
@@ -354,7 +354,7 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 			// If continuation needed, continue loop (note this is the only way for this loop to execute more than
 			// once as all other paths below will break):
 			if(scRet == SEC_E_INCOMPLETE_MESSAGE || scRet > 0) {
-				Timeout = TimeClock::Now().MSecTill(EndTime);
+				Timeout = SteadyClock().MSecTill(EndTime);
 				continue;
 			}
 			else if(scRet != SEC_E_OK) {
@@ -446,7 +446,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::TLSNegotiate(int Time
 		return Result::InvalidSocket;
 	}
 	LastErrString.clear();
-	const TimeClock EndTime(Timeout);
+	const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 
 	static constexpr DWORD ContextFlags = (ISC_REQ_SEQUENCE_DETECT | ISC_REQ_REPLAY_DETECT | ISC_REQ_CONFIDENTIALITY | ISC_RET_EXTENDED_ERROR | ISC_REQ_ALLOCATE_MEMORY | ISC_REQ_STREAM);
 
@@ -519,7 +519,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::TLSNegotiate(int Time
 		OutBufferDesc.ulVersion = SECBUFFER_VERSION;
 
 		// Update time remaining, but ensure loop executes at least once:
-		Timeout = ValueOps::MinZero(TimeClock::Now().MSecTill(EndTime));
+		Timeout = ValueOps::MinZero(SteadyClock().MSecTill(EndTime));
 
 		SECURITY_STATUS scRet = SEC_I_CONTINUE_NEEDED;
 		for(short s = 0; s < 15 && rc == Result::Timeout && Timeout >= 0; ++s) {
@@ -618,7 +618,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::TLSNegotiate(int Time
 			// If response code indicates continue needed, continue loop (note this is the only way
 			// for this loop to ever execute more than once, as all other paths below will break):
 			if(scRet == SEC_E_INCOMPLETE_MESSAGE || scRet > 0) {
-				Timeout = TimeClock::Now().MSecTill(EndTime);
+				Timeout = SteadyClock().MSecTill(EndTime);
 				continue;
 			}
 			else if(scRet != SEC_E_OK) {
@@ -714,7 +714,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::ReadExactTLS(
 	else if(Tgt == nullptr || ValueOps::Is(BytesToRead).InRange(1, TLSBufSize) == false) return Result::InvalidArg;
 
 	try {
-		const TimeClock EndTime(Timeout);
+		const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 		Result rc = Result::OK;
 
 		// Read incoming data from socket until timeout is reached or enough bytes are available in clear
@@ -725,9 +725,9 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::ReadExactTLS(
 			if(ResultOK(rc)) {
 				// Data available - update timeout, read data (then update timeout again,
 				// in case we have only received partial data and need to continue reading):
-				Timeout = TimeClock::Now().MSecTill(EndTime);
+				Timeout = SteadyClock().MSecTill(EndTime);
 				rc = PrivateReadTLS(ValueOps::MinZero(Timeout));
-				Timeout = TimeClock::Now().MSecTill(EndTime);
+				Timeout = SteadyClock().MSecTill(EndTime);
 			}
 		}
 
@@ -791,7 +791,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::ReadPacketTLS(_Out_wr
 	BytesRead = 0;
 	if(Tgt == nullptr || ValueOps::Is(MaxBytes).InRangeLeft(4, INT_MAX) == false) return Result::InvalidArg;
 	try {
-		const TimeClock EndTime(Timeout);
+		const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 
 		// Read incoming two-byte header:
 		Result rc = ReadExactTLS(Tgt, 2, Timeout);
@@ -806,7 +806,8 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::ReadPacketTLS(_Out_wr
 				return Result::Failed;
 			}
 			// Attempt to read bytes specified by packet header; if successful, set output length:
-			else if(ResultOK(rc = ReadExactTLS(Tgt, PacketSize, ValueOps::MinZero(TimeClock::Now().MSecTill(EndTime))))) BytesRead = PacketSize;
+			else if(ResultOK(rc = ReadExactTLS(Tgt, PacketSize, ValueOps::MinZero(SteadyClock().MSecTill(EndTime)))))
+				BytesRead = PacketSize;
 		}
 		return rc;
 	}
@@ -818,7 +819,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::PrivateReadTLS(int Ti
 	// which should have already validated the session socket members and checked that incoming
 	// data is available
 	try {
-		const TimeClock EndTime(Timeout);
+		const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 		const char * const EndPtr = ReadBuf.get() + TLSBufSize;
 
 		// Attempt receive/decrypt operation until data decrypted or error/timeout occurs:
@@ -869,7 +870,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::PrivateReadTLS(int Ti
 			// If response code indicates continue needed, continue loop (note this is the only way
 			// for this loop to ever execute more than once, as all other paths below will break):
 			if(scRet == SEC_E_INCOMPLETE_MESSAGE) {
-				Timeout = TimeClock::Now().MSecTill(EndTime);
+				Timeout = SteadyClock().MSecTill(EndTime);
 				continue;
 			}
 			else if(scRet == SEC_I_CONTEXT_EXPIRED) {

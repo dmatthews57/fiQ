@@ -36,6 +36,16 @@ namespace fiQCPPBaseTESTS
 			}
 		}
 
+		enum class Color { Red, Green, Blue };
+		TEST_METHOD(SerializeEnum)
+		{
+			Color red = Color::Red, blue = Color::Blue;
+			std::unique_ptr<char[]> TempBuf = std::make_unique<char[]>(200);
+			Assert::IsTrue(SerialOps::MemoryStream(TempBuf.get(), 200).Write(red), L"Serialization failed");
+			Assert::IsTrue(SerialOps::MemoryStream(TempBuf.get(), 200).Read(blue), L"Deserialization failed");
+			Assert::IsTrue(red == blue, L"Deserialized value does not match");
+		}
+
 		TEST_METHOD(SerializeString)
 		{
 			const std::string start = "TEST STRING VALUE";
