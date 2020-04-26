@@ -76,6 +76,11 @@ public:
 		memcpy(Tgt, buf, len);
 	}
 
+	// IsAlphaChar: Check if character is a letter (upper or lower case)
+	_Check_return_ static constexpr bool IsAlphaChar(char c) noexcept {
+		return (ValueOps::Is(c).InRange('A','Z') ? true : ValueOps::Is(c).InRange('a','z'));
+	}
+
 	//======================================================================================================================
 	// Decimal: Helper class to perform operations related to base-10 number formatting
 	class Decimal {

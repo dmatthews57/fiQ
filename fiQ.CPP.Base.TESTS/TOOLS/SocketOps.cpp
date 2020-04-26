@@ -164,7 +164,7 @@ namespace fiQCPPBaseTESTS
 		{
 			SocketOps::CleanupSockets();
 			Logger::WriteMessage("Sockets cleaned up");
-		}		
+		}
 
 	};
 }

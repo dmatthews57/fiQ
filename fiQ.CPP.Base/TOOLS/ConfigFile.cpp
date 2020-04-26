@@ -90,7 +90,7 @@ _Check_return_ bool ConfigFile::Initialize(_In_z_ const char* FileName) {
 		if(fp.get() == nullptr) return false;
 
 		// Set up read buffer (shared throughout this function)
-		static const size_t ReadBufSize = 1024;
+		static constexpr size_t ReadBufSize = 1024;
 		char ReadBuf[ReadBufSize + 5] = {0}, * const EndReadBuf = ReadBuf + ReadBufSize;
 
 		// Read all lines from file, looking for [SECTIONHEADERS]

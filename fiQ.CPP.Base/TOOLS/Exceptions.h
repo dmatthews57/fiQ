@@ -8,13 +8,10 @@
 #include <stdexcept>
 #include "Tools/StringOps.h"
 
-// FORMAT_RUNTIME_ERROR: Helper macro for producing runtime_error object with information on throw site
+// FORMAT_RUNTIME_ERROR: Helper macro for producing runtime_error object from string literal with information on throw site
 // - Requires use of macro rather than inline function so that FILE and FUNCTION macros work as expected
-// - Arguments to macro are passed direct to std::string::append (so incoming message can be any set of arguments that could
-//   be used to construct a std::string object)
 // - Usage: throw FORMAT_RUNTIME_ERROR("<error description text>");
-#define FORMAT_RUNTIME_ERROR(...) \
-	std::runtime_error(std::string(__FILE__).append("::").append(__FUNCTION__).append(": ").append(__VA_ARGS__))
+#define FORMAT_RUNTIME_ERROR(x) std::runtime_error(__FILE__ "::" __FUNCTION__ ": " x)
 
 namespace FIQCPPBASE {
 
@@ -47,6 +44,7 @@ namespace FIQCPPBASE {
 
 		// UnrollExceptionMap: Unroll nested exceptions into a map of strings indexed by depth
 		_Check_return_ std::map<unsigned char,std::string> UnrollExceptionMap(const std::exception& e) noexcept;
+
 		// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
 		_Check_return_ std::string UnrollExceptionString(const std::exception& e) noexcept;
 

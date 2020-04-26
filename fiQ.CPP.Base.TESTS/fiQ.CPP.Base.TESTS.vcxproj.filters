@@ -47,6 +47,9 @@
     <ClCompile Include="TOOLS\ThreadOps.cpp">
       <Filter>Source Files\Tools</Filter>
     </ClCompile>
+    <ClCompile Include="TOOLS\TimerOps.cpp">
+      <Filter>Source Files\Tools</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ToStrings.h">

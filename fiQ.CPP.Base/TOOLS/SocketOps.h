@@ -43,9 +43,9 @@ public:
 	_Check_return_ static constexpr bool ResultTimeout(Result r) noexcept {return (r == Result::Timeout);}
 	_Check_return_ static constexpr bool ResultFailed(Result r) noexcept {return (r >= Result::InvalidSocket);}
 	// Public definitions - TLS buffer sizes
-	static const size_t TLS_BUFFER_SIZE_MIN		= 0x0080;
-	static const size_t TLS_BUFFER_SIZE_DEFAULT	= 0x2000;
-	static const size_t TLS_BUFFER_SIZE_MAX		= 0x8000;
+	static constexpr size_t TLS_BUFFER_SIZE_MIN		= 0x0080;
+	static constexpr size_t TLS_BUFFER_SIZE_DEFAULT	= 0x2000;
+	static constexpr size_t TLS_BUFFER_SIZE_MAX		= 0x8000;
 
 	//======================================================================================================================
 	// Static library initialization functions: Each should be called exactly once in program lifetime

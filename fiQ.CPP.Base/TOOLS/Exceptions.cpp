@@ -85,13 +85,15 @@ LONG Exceptions::UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep) {
 // then recursively throw until no longer nested
 namespace FIQCPPBASE {
 	namespace Exceptions {
-		void AddExceptionToMap(std::map<unsigned char,std::string>& Tgt, const std::exception& e, unsigned char depth) {
-			Tgt.emplace(depth, e.what());
-			if(depth < 255) { // Should never need to exceed this value
-				try {
-					std::rethrow_if_nested(e);
+		namespace {
+			void AddExceptionToMap(std::map<unsigned char,std::string>& Tgt, const std::exception& e, unsigned char depth) {
+				Tgt.emplace(depth, e.what());
+				if(depth < 255) { // Should never need to exceed this value
+					try {
+						std::rethrow_if_nested(e);
+					}
+					catch(const std::exception& ee) {AddExceptionToMap(Tgt, ee, ++depth);}
 				}
-				catch(const std::exception& ee) {AddExceptionToMap(Tgt, ee, ++depth);}
 			}
 		}
 	}

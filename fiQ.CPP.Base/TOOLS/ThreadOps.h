@@ -56,18 +56,22 @@ public:
 
 		// Lock acquisition functions:
 		bool Lock(bool& IsLocked);
-		void Unlock(bool& IsLocked);
+		void Unlock(bool& IsLocked) noexcept;
+
+		// Non-interlocked (read-only) functions:
 		_Check_return_ bool IsLocked() const noexcept;
+		_Check_return_ int MSecLocked() const noexcept;
 
 		// Public constructor: ContinueFlag is an optional reference to a flag that tells this lock whether the owning object
 		// is still intending to run; if it ever becomes false, lock acquisition will be aborted immediately (if this is not
 		// required, just provide true to this function and lock acquisition will work blindly so long as this lock is valid)
 		SpinLock(const bool& _ContinueFlag, bool ConstructValid = false, unsigned short _SpinCount = 0) noexcept
-			: ContinueFlag(_ContinueFlag), SpinCount(_SpinCount), LockVal(ConstructValid ? 0 : 2) {}
+			: ContinueFlag(_ContinueFlag), SpinCount(_SpinCount), LockVal(ConstructValid ? 0 : 2), LastLocked() {}
 	private:
 		const bool& ContinueFlag;
 		const unsigned short SpinCount;
 		long LockVal;
+		SteadyClock LastLocked;
 	};
 
 }; // (end class Locks)
@@ -179,10 +183,11 @@ inline bool Locks::SpinLock::Lock(bool& IsLocked) {
 			else Sleep(5);
 		}
 	}
+	if(IsLocked) LastLocked.SetNow();
 	return IsLocked;
 }
 // SpinLock::Unlock: Release spin lock
-inline void Locks::SpinLock::Unlock(bool& IsLocked) {
+inline void Locks::SpinLock::Unlock(bool& IsLocked) noexcept {
 	if(IsLocked) { // Do nothing unless client had acquired lock (allow lazy caller)
 		IsLocked = false;
 		if(LockVal == 1) LockVal = 0; // Owner may have invalidated lock, only unlock if valid
@@ -190,6 +195,10 @@ inline void Locks::SpinLock::Unlock(bool& IsLocked) {
 }
 // SpinLock::IsLocked: Read-only check of current lock status
 _Check_return_ inline bool Locks::SpinLock::IsLocked() const noexcept {return (LockVal == 1);}
+// SpinLock::MsecLocked: Read-only check of how long lock has been held, if locked
+_Check_return_ inline int Locks::SpinLock::MSecLocked() const noexcept {
+	return (LockVal == 1) ? SteadyClock().MSecSince(LastLocked) : 0;
+}
 #pragma endregion Locks
 
 //==========================================================================================================================
@@ -205,7 +214,7 @@ inline ThreadOperator<T>::~ThreadOperator() noexcept(false) {
 		TO_ShouldRun = false;
 		TO_QueueLock.Invalidate(); // Ensure any thread waiting on lock gives up
 		if(TO_EventHandle != NULL) SetEvent(TO_EventHandle);
-		if(WaitForSingleObject(TO_ThreadHandle, 1000) == WAIT_TIMEOUT)
+		if(WaitForSingleObject(TO_ThreadHandle, 1000) != WAIT_OBJECT_0)
 			LoggingOps::StdErrLog("WARNING: Thread ID %08X shutdown failed, destruction will proceed", GetCurrentThreadId());
 		CloseHandle(TO_ThreadHandle);
 	}
@@ -248,15 +257,20 @@ inline bool ThreadOperator<T>::ThreadWaitStop(int Timeout) {
 	// If thread handle has not already been cleared, wait for shutdown:
 	bool ShutdownClean = (TO_ThreadHandle <= 0);
 	if(ShutdownClean == false) {
-		ShutdownClean = (WaitForSingleObject(TO_ThreadHandle, Timeout) != WAIT_TIMEOUT);
-		CloseHandle(TO_ThreadHandle);
+		ShutdownClean = (WaitForSingleObject(TO_ThreadHandle, Timeout) == WAIT_OBJECT_0);
+		if(ShutdownClean) {
+			CloseHandle(TO_ThreadHandle);
+			TO_ThreadHandle = NULL;
+			if(TO_EventHandle != NULL) {
+				CloseHandle(TO_EventHandle);
+				TO_EventHandle = NULL;
+			}
+		}
 	}
-	TO_ThreadHandle = NULL;
-
-	// Close event handle:
-	if(TO_EventHandle != NULL) CloseHandle(TO_EventHandle);
-	TO_EventHandle = NULL;
-
+	else if(TO_EventHandle != NULL) {
+		CloseHandle(TO_EventHandle);
+		TO_EventHandle = NULL;
+	}
 	return ShutdownClean;
 }
 // ThreadOperator::ThreadIsStopped: Check whether thread handle has been closed (indicating it has stopped)

@@ -99,6 +99,7 @@ private:
 
 //==========================================================================================================================
 // SteadyClock: Class wrapping a chrono::steady_clock value with millisecond resolution, for non-wall-clock durations
+// - Note that duration_cast calls in this class are casting values to millisecond resolution, not number of milliseconds
 class SteadyClock {
 public:
 	//======================================================================================================================
@@ -148,12 +149,13 @@ public:
 	_Check_return_ auto Since(const SteadyClock& s) const noexcept {
 		return std::chrono::duration_cast<T>(t - s.t).count();
 	}
-	_Check_return_ int MSecSince(const SteadyClock& s) const noexcept {
-		return gsl::narrow_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(t - s.t).count());
-	}
 	template<typename T>
 	_Check_return_ auto Till(const SteadyClock& s) const noexcept {
 		return std::chrono::duration_cast<T>(s.t - t).count();
+	}
+	// Millisecond specializations: Most commonly used, provided to make clients less verbose:
+	_Check_return_ int MSecSince(const SteadyClock& s) const noexcept {
+		return gsl::narrow_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(t - s.t).count());
 	}
 	_Check_return_ int MSecTill(const SteadyClock& s) const noexcept {
 		return gsl::narrow_cast<int>(std::chrono::duration_cast<std::chrono::milliseconds>(s.t - t).count());

@@ -162,6 +162,7 @@
     <ClInclude Include="TOOLS\StringOps.h" />
     <ClInclude Include="TOOLS\ThreadOps.h" />
     <ClInclude Include="TOOLS\TimeClock.h" />
+    <ClInclude Include="TOOLS\TimerOps.h" />
     <ClInclude Include="TOOLS\Tokenizer.h" />
     <ClInclude Include="Tools\ValueOps.h" />
   </ItemGroup>
@@ -175,6 +176,7 @@
     <ClCompile Include="TOOLS\ConfigFile.cpp" />
     <ClCompile Include="TOOLS\Exceptions.cpp" />
     <ClCompile Include="TOOLS\SocketOps.cpp" />
+    <ClCompile Include="TOOLS\TimerOps.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

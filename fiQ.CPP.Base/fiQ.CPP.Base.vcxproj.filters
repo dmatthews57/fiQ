@@ -60,6 +60,9 @@
     <ClInclude Include="TOOLS\LoggingOps.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
+    <ClInclude Include="TOOLS\TimerOps.h">
+      <Filter>Header Files\Tools</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -72,6 +75,9 @@
       <Filter>Source Files\Tools</Filter>
     </ClCompile>
     <ClCompile Include="TOOLS\SocketOps.cpp">
+      <Filter>Source Files\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="TOOLS\TimerOps.cpp">
       <Filter>Source Files\Tools</Filter>
     </ClCompile>
   </ItemGroup>
