@@ -114,18 +114,18 @@ private:
 	//======================================================================================================================
 	// Comparison retrieval function: Build CompStr object from string literal:
 	template<typename T, size_t len, std::enable_if_t<(std::is_same_v<T, const char> && len > 2), int> = 0>
-	constexpr static auto GetComp(T (&buf)[len]) {return CompStr<len - 1>(buf);}
+	static constexpr auto GetComp(T (&buf)[len]) {return CompStr<len - 1>(buf);}
 	// Comparison retrieval function: Build CompChar object from one-character string literal:
 	template<typename T, size_t len, std::enable_if_t<(std::is_same_v<T, const char> && len == 2), int> = 0>
-	constexpr static auto GetComp(T (&buf)[len]) {return CompChar(buf[0]);}
+	static constexpr auto GetComp(T (&buf)[len]) {return CompChar(buf[0]);}
 	// Comparison retrieval function: Build CompChar object from single character (allows any integral input type):
 	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-	constexpr static auto GetComp(T c) {return CompChar(gsl::narrow_cast<char>(c));}
+	static constexpr auto GetComp(T c) {return CompChar(gsl::narrow_cast<char>(c));}
 	// Comparison retrieval function: Default implementation builds CompChar object with comma:
-	constexpr static auto GetComp() {return CompChar(',');}
+	static constexpr auto GetComp() {return CompChar(',');}
 	// Comparison retrieval function: Catch-all (error) implementation
 	template<typename...Args>
-	constexpr static auto GetComp(Args&&...args) {static_assert(false, "Invalid delimiter argument");}
+	static constexpr auto GetComp(Args&&...args) {static_assert(false, "Invalid delimiter argument");}
 
 	//======================================================================================================================
 	// ParseString: Read source string, terminating tokens and storing pointers

@@ -1,0 +1,20 @@
+****************** CREATING TUPLES FROM ARRAYS:
+
+template <class... Formats, class T, size_t N, size_t... Is>
+std::tuple<Formats...> as_tuple_int(T (&arr)[N], std::index_sequence<Is...>) {
+    return std::make_tuple(Formats{arr[Is]}...);
+}
+template <class... Formats, class T, size_t N, class = std::enable_if_t<(N == sizeof...(Formats))>>
+std::tuple<Formats...> as_tuple(T (&arr)[N]) {
+    return as_tuple_int<Formats...>(arr, std::make_index_sequence<N>{});
+}
+
+template<std::size_t... I, class T, std::size_t N>
+constexpr auto f(T (&arr)[N], std::index_sequence<I...>) {
+    return std::make_tuple(arr[I]...);
+}
+
+template<class T, std::size_t N>
+constexpr auto f(T (&arr)[N]) {
+    return f(arr, std::make_index_sequence<N>{});
+}

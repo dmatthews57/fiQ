@@ -76,11 +76,6 @@ public:
 		memcpy(Tgt, buf, len);
 	}
 
-	// IsAlphaChar: Check if character is a letter (upper or lower case)
-	_Check_return_ static constexpr bool IsAlphaChar(char c) noexcept {
-		return (ValueOps::Is(c).InRange('A','Z') ? true : ValueOps::Is(c).InRange('a','z'));
-	}
-
 	//======================================================================================================================
 	// Decimal: Helper class to perform operations related to base-10 number formatting
 	class Decimal {
@@ -563,6 +558,15 @@ public:
 		// Internal constant expressions:
 		static constexpr const char ABTAB[17] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 0 };
 	};
+
+	// IsAlphaChar: Check if character is a letter (upper or lower case)
+	_Check_return_ static constexpr bool IsAlphaChar(char c) noexcept {
+		return (ValueOps::Is(c).InRange('A','Z') ? true : ValueOps::Is(c).InRange('a','z'));
+	}
+	// IsAlphaNumChar: Check if character is a letter or number
+	_Check_return_ static constexpr bool IsAlphaNumChar(char c) noexcept {
+		return (IsAlphaChar(c) ? true : Decimal::IsDecChar(c));
+	}
 
 	//======================================================================================================================
 	// TrimLeft: Trim whitespace from left-hand side of std::string
