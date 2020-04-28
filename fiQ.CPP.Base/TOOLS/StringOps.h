@@ -210,7 +210,7 @@ public:
 			typename T,			// Can be dynamically determined by compiler
 			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > 1) && (len <= MaxDigits_v<T>), int> = 0
 		>
-		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) {
+		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) noexcept(false) {
 			// Write first character, make recursive call to write next one:
 			Tgt[0] = Char(t / ValueOps::PowerOf10(len - 1));
 			return 1 + ExWriteString<len - 1>(Tgt + 1, t);
@@ -223,7 +223,7 @@ public:
 			typename T,			// Can be dynamically determined by compiler
 			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len == 1), int> = 0
 		>
-		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) {
+		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) noexcept(false) {
 			return Tgt[0] = Char(t), 1;
 		}
 		// ExWriteString: Write unsigned integral value into string, with exact number of digits specified at compile time
@@ -235,7 +235,7 @@ public:
 			typename T,			// Can be dynamically determined by compiler
 			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && (len > MaxDigits_v<T>), int> = 0
 		>
-		static size_t ExWriteString(_Pre_writable_size_(len) char* Tgt, T t) {
+		static size_t ExWriteString(_Pre_writable_size_(len) char* Tgt, T t) noexcept(false) {
 			// Add number of zeroes we will be writing to return value (deduct this value from bytes to be written by
 			// recursive call, so that default overload is then selected):
 			return ExMemSet(Tgt, '0', len - MaxDigits_v<T>)
@@ -251,7 +251,7 @@ public:
 			typename T,			// Can be dynamically determined by compiler
 			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
-		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) {
+		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) noexcept(false) {
 			return t < 0 ? (Tgt[0] = '-', 1 + ExWriteString<len - 1>(Tgt + 1, static_cast<std::make_unsigned_t<T> >(-t)))
 				: ExWriteString<len>(Tgt, static_cast<std::make_unsigned_t<T> >(t));
 		}
@@ -306,8 +306,9 @@ public:
 		static size_t FlexWriteString(_Pre_writable_size_(MaxSize) char* Tgt, T t) {
 			static_assert(MaxSize == MaxDigits_v<T>, "Don't override MaxSize");
 			return t < 0 ?
-				(Tgt[0] = '-', 1 + FlexWriteString<std::make_unsigned_t<T> >(Tgt + 1, static_cast<std::make_unsigned_t<T> >(-t)))
-				: FlexWriteString(Tgt, static_cast<std::make_unsigned_t<T> >(t));
+				(Tgt[0] = '-',
+					1 + FlexWriteString<std::make_unsigned_t<T> >(Tgt + 1, gsl::narrow_cast<std::make_unsigned_t<T> >(-t))
+				) : FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t));
 		}
 		// FlexWriteString: Write integral value into string, with a specific number of digits (determined at runtime)
 		// - This overload is called for all unsigned values
@@ -362,35 +363,6 @@ public:
 			else return {Tgt, 0};
 		}
 
-		//==================================================================================================================
-		// ISOWriteFXRate: Write a double value into ISO-style string (one exponent character plus shifted whole number)
-		// - Does not null terminate Tgt
-		// - Returns pair with string and total number of bytes written (always FieldSize)
-		// - Will throw exception if FieldSize is too small to contain value, or a negative rate is provided
-		static std::pair<const char*,size_t> ISOWriteFXRate(_Out_writes_all_(FieldSize) char* Tgt, size_t FieldSize, double FXRate) {
-			if(FieldSize < 2 || FXRate < 0) throw std::invalid_argument("Invalid field size or negative rate");
-			// The maximum number that can be represented is FieldSize - 1 digits long (first character is exponent), values
-			// requiring more than this cannot be represented in a field of this size:
-			if(FXRate >= ValueOps::PowerOf10(FieldSize - 1)) {
-				Tgt[0] = '0';
-				memset(Tgt + 1, '9', FieldSize - 1);
-				return {Tgt, FieldSize};
-			}
-			// Calculate the number of digits required to represent input value left of decimal place, then show as many
-			// decimal places as possible given that the maximum number of decimal places that can be expressed in any
-			// field is 9 (since this is highest possible value of exponent digit):
-			const char DecimalPlaces = gsl::narrow_cast<char>(
-				ValueOps::Bounded<size_t>(
-					0,
-					FieldSize - 1 - StringOps::Decimal::FlexDigits(static_cast<unsigned long long>(FXRate)),
-					9
-				)
-			);
-			Tgt[0] = DecimalPlaces | 0x30;
-			StringOps::Decimal::FlexWriteString(Tgt + 1,
-				static_cast<unsigned long long>(FXRate * ValueOps::PowerOf10(DecimalPlaces)), FieldSize - 1);
-			return {Tgt, FieldSize};
-		}
 	private:
 		// Internal constant expressions:
 		static constexpr const char DECTAB[11] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 0};
@@ -534,6 +506,49 @@ public:
 		}
 
 		//==================================================================================================================
+		// FlexWriteString: Write integral value into ASCII hex string (e.g. 0x12AB becomes "12AB"), with specific number
+		// of digits (determined at runtime)
+		// - Does not null-terminate Tgt
+		// - Returns total number of bytes written
+		// - This overload is called for all unsigned values
+		// - Brute-force determining of digits and hardcoding of template call performs better than explicit value testing;
+		//   switch statement with all possible values is required since dynamic digit count not available at compile-time
+		template<typename T, // Can be dynamically determined by compiler
+			std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0
+		>
+		static std::pair<char*,size_t> FlexWriteString(_Out_writes_all_(ExactDigits) char* Tgt, T t, size_t ExactDigits) {
+			char *ptr = Tgt;
+			if(ExactDigits > 16) ptr += ExMemSet(ptr, '0', ExactDigits - 16);
+			if(ExactDigits >= 16) ptr += ExWriteString<16>(ptr, t);
+			else if(ExactDigits == 15) ptr += ExWriteString<15>(ptr, t);
+			else if(ExactDigits == 14) ptr += ExWriteString<14>(ptr, t);
+			else if(ExactDigits == 13) ptr += ExWriteString<13>(ptr, t);
+			else if(ExactDigits == 12) ptr += ExWriteString<12>(ptr, t);
+			else if(ExactDigits == 11) ptr += ExWriteString<11>(ptr, t);
+			else if(ExactDigits == 10) ptr += ExWriteString<10>(ptr, t);
+			else if(ExactDigits == 9) ptr += ExWriteString<9>(ptr, t);
+			else if(ExactDigits == 8) ptr += ExWriteString<8>(ptr, t);
+			else if(ExactDigits == 7) ptr += ExWriteString<7>(ptr, t);
+			else if(ExactDigits == 6) ptr += ExWriteString<6>(ptr, t);
+			else if(ExactDigits == 5) ptr += ExWriteString<5>(ptr, t);
+			else if(ExactDigits == 4) ptr += ExWriteString<4>(ptr, t);
+			else if(ExactDigits == 3) ptr += ExWriteString<3>(ptr, t);
+			else if(ExactDigits == 2) ptr += ExWriteString<2>(ptr, t);
+			else if(ExactDigits == 1) *ptr++ = Char(t);
+			return {Tgt, (ptr - Tgt)};
+		}
+		// FlexWriteString: Write integral value into ASCII hex string, with specific number of digits (determined at runtime)
+		// - This overload is called when any signed type is passed to function; just casts to unsigned equivalent
+		// - Does not null-terminate Tgt
+		// - Returns total number of bytes written (always "len")
+		template<typename T,			// Can be dynamically determined by compiler
+			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
+		>
+		static std::pair<char*,size_t> FlexWriteString(_Out_writes_all_(ExactDigits) char* Tgt, T t, size_t ExactDigits) {
+			return FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t), ExactDigits);
+		}
+
+		//==================================================================================================================
 		// PackTo: Function to pack "len * 2" bytes of ASCII hex into "len" bytes of hex data
 		// - For example, PackTo<3>("12ABCD") writes values {0x12, 0xAB, 0xCD} into first three bytes of target
 		// - Returns total number of bytes written (always "len")
@@ -557,6 +572,65 @@ public:
 	private:
 		// Internal constant expressions:
 		static constexpr const char ABTAB[17] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 0 };
+	};
+
+	//======================================================================================================================
+	// Float: Helper class to perform operations related to floating-point number formatting
+	class Float {
+	public:
+		//==================================================================================================================
+		// FlexWriteString: Write floating point value into string, with minimum required digits to left of decimal place
+		// and "precision" digits (minimum 1) to right of decimal place (values determined at runtime)
+		// - Does not null-terminate Tgt
+		// - Returns total number of bytes written
+		template<typename T, // Can be dynamically determined by compiler
+			size_t MaxSize = Decimal::MaxDigits_v<long long>, // Allow compiler to determine this - used in annotation check below
+			std::enable_if_t<std::is_floating_point_v<T>, int> = 0
+		>
+		static std::pair<char*,size_t> FlexWriteString(
+			_Pre_writable_size_(MaxSize + precision + 1) char* Tgt, T t, size_t precision) {
+			static_assert(MaxSize == Decimal::MaxDigits_v<long long>, "Don't override MaxSize");
+			char *ptr = Tgt;
+			ptr += Decimal::FlexWriteString(ptr, gsl::narrow_cast<long long>(t)); // Write whole number portion
+			*ptr++ = '.'; // Add decimal place
+			// Calculate value to multiply by to reach specified number of digits, multiply and wrote:
+			const auto prpow10 = gsl::narrow_cast<long long>(ValueOps::PowerOf10(ValueOps::Bounded(0ULL, precision, 9ULL)));
+			ptr += StringOps::Decimal::FlexWriteString(ptr,
+				static_cast<long long>((t * (t < 0 ? -prpow10 : prpow10))) % prpow10,
+				precision).second;
+			return { Tgt, (ptr - Tgt) };
+		}
+
+		//==================================================================================================================
+		// ISOWriteFXRate: Write a double value into ISO-style string (one exponent character plus shifted whole number)
+		// - Does not null terminate Tgt
+		// - Returns pair with string and total number of bytes written (always FieldSize)
+		// - Will throw exception if FieldSize is too small to contain value, or a negative rate is provided
+		template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+		static std::pair<const char*,size_t> ISOWriteFXRate(_Out_writes_all_(FieldSize) char* Tgt, size_t FieldSize, T FXRate) {
+			if(FieldSize < 2 || FXRate < 0) throw std::invalid_argument("Invalid field size or negative rate");
+			// The maximum number that can be represented is FieldSize - 1 digits long (first character is exponent), values
+			// requiring more than this cannot be represented in a field of this size:
+			if(FXRate >= ValueOps::PowerOf10(FieldSize - 1)) {
+				Tgt[0] = '0';
+				memset(Tgt + 1, '9', FieldSize - 1);
+				return {Tgt, FieldSize};
+			}
+			// Calculate the number of digits required to represent input value left of decimal place, then show as many
+			// decimal places as possible given that the maximum number of decimal places that can be expressed in any
+			// field is 9 (since this is highest possible value of exponent digit):
+			const char DecimalPlaces = gsl::narrow_cast<char>(
+				ValueOps::Bounded<size_t>(
+					0,
+					FieldSize - 1 - StringOps::Decimal::FlexDigits(static_cast<unsigned long long>(FXRate)),
+					9
+				)
+			);
+			Tgt[0] = DecimalPlaces | 0x30;
+			StringOps::Decimal::FlexWriteString(Tgt + 1,
+				static_cast<unsigned long long>(FXRate * ValueOps::PowerOf10(DecimalPlaces)), FieldSize - 1);
+			return {Tgt, FieldSize};
+		}
 	};
 
 	// IsAlphaChar: Check if character is a letter (upper or lower case)

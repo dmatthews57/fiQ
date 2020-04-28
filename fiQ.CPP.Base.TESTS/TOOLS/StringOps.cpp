@@ -184,18 +184,25 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(0, memcmp(temp, "18446744073709551615", 20), L"Incorrect string written (max unsigned)");
 		}
 
-		TEST_METHOD(DecimalISOWriteFXRate)
+		TEST_METHOD(Float)
 		{
-			Assert::ExpectException<std::invalid_argument>([] {char temp[10] = {0}; StringOps::Decimal::ISOWriteFXRate(temp, 0, 1.23);}, L"Expected invalid_argument");
-			Assert::ExpectException<std::invalid_argument>([] {char temp[10] = {0}; StringOps::Decimal::ISOWriteFXRate(temp, 10, -1.23);}, L"Expected invalid_argument");
+			Assert::ExpectException<std::invalid_argument>([] {char temp[10] = {0}; StringOps::Float::ISOWriteFXRate(temp, 0, 1.23);}, L"Expected invalid_argument");
+			Assert::ExpectException<std::invalid_argument>([] {char temp[10] = {0}; StringOps::Float::ISOWriteFXRate(temp, 10, -1.23);}, L"Expected invalid_argument");
 
-			char temp[20] = {0};
-			Assert::AreEqual(5ULL, StringOps::Decimal::ISOWriteFXRate(temp, 5, 12345678).second, L"Invalid length written (out of range)");
+			char temp[30] = {0};
+			Assert::AreEqual(5ULL, StringOps::Float::ISOWriteFXRate(temp, 5, 12345678.0).second, L"Invalid length written (out of range)");
 			Assert::AreEqual(0, memcmp(temp, "09999", 5), L"Invalid value written (out of range)");
-			Assert::AreEqual(5ULL, StringOps::Decimal::ISOWriteFXRate(temp, 5, 12.34).second, L"Invalid length written (normal)");
+			Assert::AreEqual(5ULL, StringOps::Float::ISOWriteFXRate(temp, 5, 12.34).second, L"Invalid length written (normal)");
 			Assert::AreEqual(0, memcmp(temp, "21234", 5), L"Invalid value written (normal)");
-			Assert::AreEqual(5ULL, StringOps::Decimal::ISOWriteFXRate(temp, 5, 0.0001234).second, L"Invalid length written (below range)");
+			Assert::AreEqual(5ULL, StringOps::Float::ISOWriteFXRate(temp, 5, 0.0001234).second, L"Invalid length written (below range)");
 			Assert::AreEqual(0, memcmp(temp, "30000", 5), L"Invalid value written (below range)");
+
+			Assert::AreEqual(9ULL, StringOps::Float::FlexWriteString(temp, 1234.0123, 4).second, L"Wrong number of digits written (float exact)");
+			Assert::AreEqual(0, memcmp(temp, "1234.0123", 9), L"Incorrect string written (float exact)");
+			Assert::AreEqual(10ULL, StringOps::Float::FlexWriteString(temp, -1234.0123, 4).second, L"Wrong number of digits written (float exact negative)");
+			Assert::AreEqual(0, memcmp(temp, "-1234.0123", 10), L"Incorrect string written (float exact negative)");
+			Assert::AreEqual(11ULL, StringOps::Float::FlexWriteString(temp, 1234.0123, 6).second, L"Wrong number of digits written (float pad)");
+			Assert::AreEqual(0, memcmp(temp, "1234.012300", 11), L"Incorrect string written (float pad)");
 		}
 
 		TEST_METHOD(Ascii)
@@ -271,6 +278,17 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(16ULL, StringOps::Ascii::ExWriteString<16>(temp, ULLONG_MAX), L"Wrong number of digits written (max unsigned)");
 			Assert::AreEqual(0, memcmp(temp, "FFFFFFFFFFFFFFFF", 16), L"Incorrect string written (max unsigned)");
 		}
+
+		// TODO: ASCII FLEXWRITE
+		//{char temp[20] = {0};
+		//size_t len = StringOps::Ascii::ExWriteString<1>(temp, ULLONG_MAX);
+		//printf("C[%zu][%.*s]\n", len, gsl::narrow_cast<int>(len), temp);}
+
+		//{char temp[20] = {0};
+		//for(size_t s = 0; s <= 18; ++s) {
+		//	size_t len = StringOps::Ascii::FlexWriteString(temp, ULLONG_MAX, s).second;
+		//	printf("D[%zu][%.*s]\n", len, gsl::narrow_cast<int>(len), temp);
+		//}}
 
 		TEST_METHOD(AsciiPackUnpack)
 		{
