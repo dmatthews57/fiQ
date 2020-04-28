@@ -279,16 +279,17 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(0, memcmp(temp, "FFFFFFFFFFFFFFFF", 16), L"Incorrect string written (max unsigned)");
 		}
 
-		// TODO: ASCII FLEXWRITE
-		//{char temp[20] = {0};
-		//size_t len = StringOps::Ascii::ExWriteString<1>(temp, ULLONG_MAX);
-		//printf("C[%zu][%.*s]\n", len, gsl::narrow_cast<int>(len), temp);}
-
-		//{char temp[20] = {0};
-		//for(size_t s = 0; s <= 18; ++s) {
-		//	size_t len = StringOps::Ascii::FlexWriteString(temp, ULLONG_MAX, s).second;
-		//	printf("D[%zu][%.*s]\n", len, gsl::narrow_cast<int>(len), temp);
-		//}}
+		TEST_METHOD(AsciiFlexWriteString)
+		{
+			char temp[20] = {0};
+			
+			const unsigned long long testval = 0xFEDCBA9876543210ULL;
+			static const char compval[] = "00FEDCBA9876543210";
+			for(size_t s = 0; s <= 18; ++s) {
+				Assert::AreEqual(s, StringOps::Ascii::FlexWriteString(temp, testval, s).second, L"Wrong number of hex chars written");
+				Assert::AreEqual(0, memcmp(temp, compval + (18 - s), 18 - s), L"Incorrect string written");
+			}
+		}
 
 		TEST_METHOD(AsciiPackUnpack)
 		{

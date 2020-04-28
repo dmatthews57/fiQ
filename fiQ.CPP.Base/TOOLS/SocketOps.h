@@ -8,7 +8,7 @@
 #include <security.h>
 #include <schnlsp.h>
 #include "Tools/Exceptions.h"
-#include "Tools/TimeClock.h"
+#include "Tools/SteadyClock.h"
 #include "Tools/ValueOps.h"
 
 namespace FIQCPPBASE {
@@ -781,4 +781,4 @@ _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::ReadPacket(
 }
 #pragma endregion SocketOps::SessionSocket
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

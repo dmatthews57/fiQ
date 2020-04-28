@@ -11,7 +11,7 @@
 // FORMAT_RUNTIME_ERROR: Helper macro for producing runtime_error object from string literal with information on throw site
 // - Requires use of macro rather than inline function so that FILE and FUNCTION macros work as expected
 // - Usage: throw FORMAT_RUNTIME_ERROR("<error description text>");
-#define FORMAT_RUNTIME_ERROR(x) std::runtime_error(__FILE__ "::" __FUNCTION__ ": " x)
+#define FORMAT_RUNTIME_ERROR(x) std::runtime_error(__FILE__ "::" __FUNCTION__ ": " x + StringOps::PathLength(__FILE__))
 
 namespace FIQCPPBASE {
 
@@ -48,6 +48,6 @@ namespace FIQCPPBASE {
 		// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
 		_Check_return_ std::string UnrollExceptionString(const std::exception& e) noexcept;
 
-	} // (end namespace Exceptions)
+	}; // (end namespace Exceptions)
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

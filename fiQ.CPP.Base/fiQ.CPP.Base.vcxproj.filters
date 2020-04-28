@@ -19,6 +19,12 @@
     <Filter Include="Source Files\Tools">
       <UniqueIdentifier>{71738224-8b05-48f1-8089-7803d80443e9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Logging">
+      <UniqueIdentifier>{aecb3df6-9812-4e5d-bc05-e93acaf4aa29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Logging">
+      <UniqueIdentifier>{8954d7ea-c401-42b7-a2da-e3a3dd59722e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -57,11 +63,26 @@
     <ClInclude Include="TOOLS\ThreadOps.h">
       <Filter>Header Files\Tools</Filter>
     </ClInclude>
-    <ClInclude Include="TOOLS\LoggingOps.h">
-      <Filter>Header Files\Tools</Filter>
-    </ClInclude>
     <ClInclude Include="TOOLS\TimerOps.h">
       <Filter>Header Files\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="LOGGING\LogMessage.h">
+      <Filter>Header Files\Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="LOGGING\LogMessageBuilder.h">
+      <Filter>Header Files\Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="LOGGING\LogMessageTemplate.h">
+      <Filter>Header Files\Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="TOOLS\SteadyClock.h">
+      <Filter>Header Files\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="LOGGING\LogSink.h">
+      <Filter>Header Files\Logging</Filter>
+    </ClInclude>
+    <ClInclude Include="LOGGING\ConsoleSink.h">
+      <Filter>Header Files\Logging</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -79,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="TOOLS\TimerOps.cpp">
       <Filter>Source Files\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="LOGGING\LogSink.cpp">
+      <Filter>Source Files\Logging</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

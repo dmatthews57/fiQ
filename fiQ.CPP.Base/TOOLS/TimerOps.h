@@ -101,7 +101,7 @@ private:
 				return GetTimerExecutor().TimerThreadExec();
 			}
 			catch(const std::exception& e) {
-				LoggingOps::StdErrLog("WARNING: Timer thread ID %08X caught unhandled exception, exiting:%s",
+				LogSink::StdErrLog("WARNING: Timer thread ID %08X caught unhandled exception, exiting:%s",
 					GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
 				return 99;
 			}
@@ -136,4 +136,4 @@ _Check_return_ inline bool TimerHandle::IsSet() const noexcept {
 	return (tcb != nullptr);
 }
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

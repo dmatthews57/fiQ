@@ -1,0 +1,214 @@
+#pragma once
+//==========================================================================================================================
+// LogMessageBuilder.h : Definition of classes and utilities for generating LogMessage objects
+//==========================================================================================================================
+
+#include "LogMessageTemplate.h"
+#include "LogMessage.h"
+
+namespace FIQCPPBASE {
+
+//==========================================================================================================================
+// LogMessageBuilder: Class used to combine compile-time template with run-time arguments to produce a LogMessage
+template<size_t N, // Placeholder count dictated by LogMessageTemplate (provided separately for compile-time validation)
+	typename T // Tuple of N logging arguments (wrapped and forwarded by helper function)
+>
+class LogMessageBuilder {
+public:
+
+	// Build function: Construct and return a LogMessage object using my template and parameters
+	std::unique_ptr<LogMessage> Build(_In_opt_z_ const char* fname = nullptr) const;
+
+	constexpr LogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level, T&& t) noexcept
+		: lt(_lt), level(_level), runtimeargs(t) {
+		// Ensure number of arguments received by constructor matches expected number of placeholders in
+		// message template (done with static_assert instead of SFINAE to provide friendlier error):
+		static_assert(std::tuple_size_v<T> == N, "Mismatch between number of arguments and template placeholders");
+	}
+
+private:
+
+	// Private members - set at construction
+	const LogMessageTemplate& lt; // Private reference to static format template for this log message
+	const LogLevel level; // Level associated with this message
+	T runtimeargs; // Tuple of runtime arguments to be applied to template placeholder
+
+	//======================================================================================================================
+	// Element size calculation functions - used by ElementSize functions to determine approximate length of element:
+	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+	static constexpr size_t CalcElementSize(const T&, size_t precision) {
+		// Use value explicitly set in template, if any, otherwise max decimal digits for type:
+		return (precision ? precision : StringOps::Decimal::MaxDigits_v<T>);
+	}
+	template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+	static constexpr size_t CalcElementSize(const T&, size_t precision) {
+		// Floating point values will ultimately be written as one long integer, decimal point
+		// plus number of decimal digits equal to precision (minimum 1):
+		return StringOps::Decimal::MaxDigits_v<long long> + 1 + precision;
+	}
+	template<typename T, std::enable_if_t<std::is_same_v<std::string,T>, int> = 0>
+	static constexpr size_t CalcElementSize(const T& t, size_t precision) {
+		// Use exact length of string, up to precision:
+		return (t.length() > precision ? precision : t.length());
+	}
+	template<typename T, std::enable_if_t<std::is_same_v<std::remove_const_t<T>, char>, int> = 0>
+	static constexpr size_t CalcElementSize(T* t, size_t precision) {
+		// Use length of string, up to precision:
+		const size_t len = strlen(t);
+		return (len > precision ? precision : len);
+	}
+
+	//======================================================================================================================
+	// Element size totaling functions - used during Build determine approximate total length of message:
+	template<size_t s, std::enable_if_t<(s > (N + N)), int> = 0> // Terminal case
+	size_t ElementSize() const noexcept(false) {return 0;}
+	template<size_t s, std::enable_if_t<(s <= (N + N) && (s % 2) != 0), int> = 0> // Placeholder case
+	size_t ElementSize() const noexcept(false) {
+		return CalcElementSize(std::get<s / 2>(runtimeargs), lt.PlaceholderPrecision(s / 2))
+			+ ElementSize<s + 1>(); // Continue to next argument
+	}
+	template<size_t s, std::enable_if_t<(s <= (N + N) && (s % 2) == 0), int> = 0> // Fixed string case
+	size_t ElementSize() const noexcept(false) {
+		return lt.TokenLength(s) // Exact length of non-placeholder text
+			+ ElementSize<s + 1>(); // Continue to next argument
+	}
+	size_t ElementSizes() const noexcept(false) {return ElementSize<0>();}
+
+	// Element formatting functions - used during Build to format a single element:
+	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+	static constexpr std::pair<const char*,size_t> FormatElement(
+		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf, T t,
+		LogMessageTemplate::Format format, size_t precision) {
+		// Write integral value to preallocated buffer, returning buffer and bytes written:
+		if(format == LogMessageTemplate::Format::Hex) return StringOps::Ascii::FlexWriteString(buf, t, precision);
+		else if(precision > 0) return StringOps::Decimal::FlexWriteString(buf, t, precision);
+		else return { buf, StringOps::Decimal::FlexWriteString(buf, t) };
+	}
+	template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+	static constexpr std::pair<const char*,size_t> FormatElement(
+		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf, T t,
+		LogMessageTemplate::Format, size_t precision) {
+		// Write float value into preallocated buffer, returning buffer and bytes written:
+		return StringOps::Float::FlexWriteString(buf, t, precision);
+	}
+	template<typename T, std::enable_if_t<std::is_same_v<std::string,T>, int> = 0>
+	static constexpr std::pair<const char*,size_t> FormatElement(char*, // Preallocated buffer not required
+		const T& t, LogMessageTemplate::Format, size_t precision) {
+		return { t.data(), ValueOps::Bounded<size_t>(0, t.length(), precision) };
+	}
+	template<typename T, std::enable_if_t<std::is_same_v<std::remove_const_t<T>, char>, int> = 0>
+	static constexpr std::pair<const char*,size_t> FormatElement(char*, // Preallocated buffer not required
+		const T* t, LogMessageTemplate::Format, size_t precision) {
+		return { t, ValueOps::Bounded<size_t>(0, strlen(t), precision) };
+	}
+
+	//======================================================================================================================
+	// Element construction functions - called during Build to apply template and parameters to output string and context
+	template<size_t s, std::enable_if_t<(s > (N + N)), int> = 0> // Terminal case
+	void BuildElement(char*, std::string&, LogMessage::ContextEntries&) const noexcept(false) {}
+	template<size_t s, std::enable_if_t<(s <= (N + N) && (s % 2) != 0), int> = 0> // Placeholder case
+	GSL_SUPPRESS(con.4) // "arg" value below is sometimes pointer, sometimes not - can't always be const const
+	void BuildElement(
+		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf,
+		std::string& message, LogMessage::ContextEntries& context) const noexcept(false) {
+		// Retrieve argument from tuple, format and precision from template:
+		const auto arg = std::get<s / 2>(runtimeargs);
+		const auto phformat = lt.PlaceholderFormat(s / 2);
+		const size_t phprecision = lt.PlaceholderPrecision(s / 2);
+		// Format argument (using preallocated buffer, if required) and capture data/length:
+		const std::pair<const char*,size_t> phvalue = FormatElement(buf, arg, phformat, phprecision);
+		if(phvalue.second) { // Ignore zero-length values
+			message.append(phvalue.first, phvalue.second); // Append to member string
+			// If this is a named placeholder, add it to context collection:
+			const size_t phnamelen = lt.PlaceholderLen(s / 2);
+			if(phnamelen > 0) {
+				context.emplace_back(std::piecewise_construct,
+					std::forward_as_tuple(lt.Placeholder(s / 2), phnamelen),
+					std::forward_as_tuple(phvalue.first, phvalue.second)
+				);
+			}
+		}
+		BuildElement<s + 1>(buf, message, context);
+	}
+	template<size_t s, std::enable_if_t<(s <= (N + N) && (s % 2) == 0), int> = 0> // Fixed string case
+	void BuildElement(
+		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf,
+		std::string& message, LogMessage::ContextEntries& context) const noexcept(false) {
+		message.append(lt.Token(s), lt.TokenLength(s));
+		BuildElement<s + 1>(buf, message, context);
+	}
+	template<size_t bufsize>
+	void BuildElements(char (&buf)[bufsize], std::string& message, LogMessage::ContextEntries& context) const noexcept(false) {
+		static_assert(bufsize > LogMessageTemplate::MAX_PLACEHOLDER_LEN, "Write buffer too small");
+		BuildElement<0>(buf, message, context);
+	}
+
+};
+
+//==========================================================================================================================
+// LogMessageBuilder<0>: Partial specialization of class for messages with zero placeholders (static log message)
+template<typename T> // Tuple of logging arguments (unused in this specialization)
+class LogMessageBuilder<0,T> {
+public:
+	constexpr std::unique_ptr<LogMessage> Build(_In_opt_z_ const char* fname = nullptr) const;
+	constexpr LogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level) : lt(_lt), level(_level) {}
+private:
+	const LogMessageTemplate& lt;
+	const LogLevel level;
+};
+
+
+//==========================================================================================================================
+// LogMessageBuilder<N>::Build: Construct LogMessage by applying runtime arguments to template:
+template<size_t N, typename T>
+inline std::unique_ptr<LogMessage> LogMessageBuilder<N,T>::Build(_In_opt_z_ const char* fname) const {
+	// Declare local variables to hold data, reserve expected sizes:
+	std::string message;
+	message.reserve(ElementSizes());
+	LogMessage::ContextEntries context;
+	// If function name provided, reserve extra space in context and add:
+	context.reserve(lt.PlaceholderCount() + (fname ? 1 : 0));
+	if(fname) context.emplace_back(std::piecewise_construct, std::forward_as_tuple("FUNC"), std::forward_as_tuple(fname));
+	// Apply arguments to local variables, then move to named constructor of LogMessage:
+	char temp[LogMessageTemplate::MAX_PLACEHOLDER_LEN + 5] = {0};
+	BuildElements(temp, message, context);
+	return LogMessage::Create(level, std::move(message), std::move(context));
+}
+// LogMessageBuilder<0>::Build: Construct LogMessage by directly passing static template string:
+template<typename T>
+inline constexpr std::unique_ptr<LogMessage> LogMessageBuilder<0,T>::Build(_In_opt_z_ const char* fname) const {
+	auto l = LogMessage::Create(level, lt.Token(0), lt.TokenLength(0));
+	if(fname) l->AddContext("FUNC", fname);
+	return l;
+}
+
+//==========================================================================================================================
+// LogMessage argument validator: Ensures only valid types are passed to LogMessage as placeholder values
+template<typename T>
+struct ValidLogArgument : std::integral_constant<bool,
+	std::is_integral_v<std::decay_t<T>>
+	|| std::is_floating_point_v<std::decay_t<T>>
+	|| std::is_same_v<std::decay_t<T>, char const*>
+	|| std::is_same_v<std::decay_t<T>, char*>
+	|| std::is_same_v<std::decay_t<T>, std::string>
+> {};
+template<typename...Args>
+struct ValidLogArguments : std::conjunction<ValidLogArgument<Args>...> {};
+
+//==========================================================================================================================
+// Helper function to create a LogMessage object combining a compile-time formatting template and run-time arguments
+// (receives token count of LogMessageTemplate via explicit template parameter in order to allow compile-time
+// validation of arguments received against placeholders in template):
+template<size_t PlaceholderCount, typename...Args>
+const auto CreateLogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level, Args&&... args) noexcept {
+	const auto a = std::forward_as_tuple(args...);
+	static_assert(ValidLogArguments<Args...>::value, "Invalid arguments found in list");
+	return LogMessageBuilder<PlaceholderCount, std::tuple<Args...>>(_lt, _level, a);
+}
+// Partial specialization for creating builder with no runtime arguments
+template<size_t N>
+constexpr auto CreateLogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level) noexcept {
+	return LogMessageBuilder<0,void>(_lt, _level);
+}
+
+}; // (end namespace FIQCPPBASE)

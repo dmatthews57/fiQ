@@ -724,6 +724,12 @@ public:
 		return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(utf8);
 	}
 
+	// EndOfPath: Compile-time function to determine the length of the path portion of a filename (primarily __FILE__ macro)
+	// - Usage: "__FILE__" + PathLength(__FILE__)" will evaluate to only filename portion of source file
+	static constexpr size_t PathLength(const char * const FullPath, size_t index = 0, size_t last_slash = -1) {
+		return (FullPath[index] == 0) ? last_slash + 1 // End of string, return first position after slash (zero, if none)
+			: PathLength(FullPath, index + 1, (FullPath[index] == '/' || FullPath[index] == '\\') ? index : last_slash);
+	}
 };
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

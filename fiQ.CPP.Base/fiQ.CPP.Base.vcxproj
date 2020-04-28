@@ -151,14 +151,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="LOGGING\ConsoleSink.h" />
+    <ClInclude Include="LOGGING\LogMessage.h" />
+    <ClInclude Include="LOGGING\LogMessageBuilder.h" />
+    <ClInclude Include="LOGGING\LogMessageTemplate.h" />
+    <ClInclude Include="LOGGING\LogSink.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="TOOLS\ConfigFile.h" />
     <ClInclude Include="TOOLS\Exceptions.h" />
     <ClInclude Include="TOOLS\FileOps.h" />
     <ClInclude Include="Tools\gsl.h" />
-    <ClInclude Include="TOOLS\LoggingOps.h" />
     <ClInclude Include="TOOLS\SerialOps.h" />
     <ClInclude Include="TOOLS\SocketOps.h" />
+    <ClInclude Include="TOOLS\SteadyClock.h" />
     <ClInclude Include="TOOLS\StringOps.h" />
     <ClInclude Include="TOOLS\ThreadOps.h" />
     <ClInclude Include="TOOLS\TimeClock.h" />
@@ -167,6 +172,7 @@
     <ClInclude Include="Tools\ValueOps.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="LOGGING\LogSink.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

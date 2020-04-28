@@ -176,4 +176,4 @@ _Check_return_ inline bool SerialOps::MemoryStream::DoWrite(_In_reads_(SrcSize) 
 	return false;
 }
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

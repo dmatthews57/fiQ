@@ -4,8 +4,9 @@
 //==========================================================================================================================
 
 #include <process.h>
+#include "Logging/LogSink.h"
 #include "Tools/Exceptions.h"
-#include "Tools/LoggingOps.h"
+#include "Tools/SteadyClock.h"
 
 namespace FIQCPPBASE {
 
@@ -145,7 +146,7 @@ private:
 			return MyObject->ThreadExecute();
 		}
 		catch(const std::exception& e) {
-			LoggingOps::StdErrLog("WARNING: Thread ID %08X caught unhandled exception, exiting:%s",
+			LogSink::StdErrLog("WARNING: Thread ID %08X caught unhandled exception, exiting:%s",
 				GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
 			return 99;
 		}
@@ -210,12 +211,12 @@ inline ThreadOperator<T>::~ThreadOperator() noexcept(false) {
 	// if child class failed to do so, allowing destruction to proceed without at least stopping the worker thread could
 	// potentially cause major problems, so attempt to perform shutdown now:
 	if(TO_ThreadHandle > 0) {
-		LoggingOps::StdErrLog("WARNING: Thread ID %08X destructing without shutdown, attempting now", GetThreadId(TO_ThreadHandle));
+		LogSink::StdErrLog("WARNING: Thread ID %08X destructing without shutdown, attempting now", GetThreadId(TO_ThreadHandle));
 		TO_ShouldRun = false;
 		TO_QueueLock.Invalidate(); // Ensure any thread waiting on lock gives up
 		if(TO_EventHandle != NULL) SetEvent(TO_EventHandle);
 		if(WaitForSingleObject(TO_ThreadHandle, 1000) != WAIT_OBJECT_0)
-			LoggingOps::StdErrLog("WARNING: Thread ID %08X shutdown failed, destruction will proceed", GetCurrentThreadId());
+			LogSink::StdErrLog("WARNING: Thread ID %08X shutdown failed, destruction will proceed", GetCurrentThreadId());
 		CloseHandle(TO_ThreadHandle);
 	}
 	if(TO_EventHandle != NULL) CloseHandle(TO_EventHandle);
@@ -353,4 +354,4 @@ template<typename T>
 inline void ThreadOperator<T>::ThreadClearEventFlag() {if(TO_EventHandle) ResetEvent(TO_EventHandle);}
 #pragma endregion ThreadOperator
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

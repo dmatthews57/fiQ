@@ -53,7 +53,7 @@ bool TimerHandle::TimerExecutor::Cleanup() {
 	if(ShutdownClean == false) {
 		const DWORD rc = WaitForMultipleObjects(RunningThreadCount, RunningThreads, TRUE, 2500);
 		if((ShutdownClean = (rc == WAIT_OBJECT_0)) == false)
-			LoggingOps::StdErrLog("WARNING: Timer manager threads not stopped cleanly [%d]", rc);
+			LogSink::StdErrLog("WARNING: Timer manager threads not stopped cleanly [%d]", rc);
 		for(DWORD i = 0; i < RunningThreadCount; ++i) CloseHandle(RunningThreads[i]);
 	}
 	return ShutdownClean;
@@ -62,11 +62,11 @@ bool TimerHandle::TimerExecutor::Cleanup() {
 TimerHandle::TimerExecutor::~TimerExecutor() noexcept(false) {
 	// In normal circumstances, all worker threads should be shut down and all values cleaned up by call to Cleanup;
 	// if main() failed to do so, just log warning (if this is being destructed, program is terminating anyway):
-	if(ThreadsShouldRun) LoggingOps::StdErrLog("WARNING: Timer manager destructing without shutdown");
+	if(ThreadsShouldRun) LogSink::StdErrLog("WARNING: Timer manager destructing without shutdown");
 }
 // TimerExecutor::TimerThreadExec: For lifetime of timer system, pick up and execute functions
 unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
-	LoggingOps::StdOutLog("Timer thread %08X started", GetCurrentThreadId());
+	LogSink::StdErrLog("Timer thread %08X started", GetCurrentThreadId()); // TODO: Debug log instead
 	while(ThreadsShouldRun) {
 
 		// Look for expired timers ready to execute:
@@ -105,7 +105,7 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 			}
 		}
 		catch(const std::exception& e) {
-			LoggingOps::StdErrLog("WARNING: Timer thread ID %08X exception polling timers:%s",
+			LogSink::StdErrLog("WARNING: Timer thread ID %08X exception polling timers:%s",
 				GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
 		}
 
@@ -115,7 +115,7 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 				ToExec->Exec();
 			}
 			catch(const std::exception& e) {
-				LoggingOps::StdErrLog("WARNING: Timer thread ID %08X caught exception from function:%s",
+				LogSink::StdErrLog("WARNING: Timer thread ID %08X caught exception from function:%s",
 					GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
 			}
 			ToExec = nullptr;
@@ -125,7 +125,7 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 		// there are no functions waiting to execute)
 		if(ThreadsShouldRun) Sleep(5);
 	}
-	LoggingOps::StdOutLog("Timer thread %08X stopped", GetCurrentThreadId());
+	LogSink::StdErrLog("Timer thread %08X stopped", GetCurrentThreadId()); // TODO: Debug log instead
 	return 0;
 }
 

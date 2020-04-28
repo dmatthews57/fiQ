@@ -326,4 +326,4 @@ _Check_return_ inline ConfigFile::SectionPtr ConfigFile::GetSection(const std::s
 	return nullptr;
 }
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

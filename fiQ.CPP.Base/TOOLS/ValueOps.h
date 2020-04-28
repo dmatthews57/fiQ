@@ -127,5 +127,4 @@ private:
 	};
 };
 
-
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)

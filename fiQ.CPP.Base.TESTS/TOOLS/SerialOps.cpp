@@ -18,7 +18,8 @@ namespace fiQCPPBaseTESTS
 			const TimeClock tstart = TimeClock::Now();
 			std::unique_ptr<char[]> TempBuf = std::make_unique<char[]>(200);
 			Assert::IsTrue(tstart.SerializeTo(SerialOps::MemoryStream(TempBuf.get(), 200)), L"Serialization failed");
-			TimeClock tend(500); // Ensure second TimeClock does not equal start
+			Sleep(100); // Ensure second TimeClock does not equal start
+			TimeClock tend;
 			Assert::IsTrue(tend.ReadFrom(SerialOps::MemoryStream(TempBuf.get(), 200)), L"Deserialization failed");
 			Assert::IsTrue(tstart == tend, L"Deserialized value does not match");
 		}

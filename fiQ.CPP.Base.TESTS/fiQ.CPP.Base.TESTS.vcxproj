@@ -162,6 +162,7 @@
     <ClCompile Include="TOOLS\Exceptions.cpp" />
     <ClCompile Include="TOOLS\SerialOps.cpp" />
     <ClCompile Include="TOOLS\SocketOps.cpp" />
+    <ClCompile Include="TOOLS\SteadyClock.cpp" />
     <ClCompile Include="TOOLS\StringOps.cpp" />
     <ClCompile Include="TOOLS\ThreadOps.cpp" />
     <ClCompile Include="TOOLS\TimeClock.cpp" />

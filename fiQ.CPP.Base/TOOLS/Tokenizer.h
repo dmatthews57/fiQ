@@ -220,4 +220,4 @@ inline constexpr void Tokenizer::ParseString(_Inout_updates_z_(len + 1) char* bu
 	toks.emplace_back(std::make_pair(BasePtr, EndPtr - BasePtr));
 }
 
-} // (end namespace FIQCPPBASE)
+}; // (end namespace FIQCPPBASE)
