@@ -80,48 +80,56 @@ LONG Exceptions::UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep) {
 	// Return to inform program that it should execute its default handler (which will typically terminate the process):
 	return EXCEPTION_EXECUTE_HANDLER;
 }
-
-// AddExceptionToMap: Local function used while unrolling exceptions to add the current exception to map,
-// then recursively throw until no longer nested
+// AddExceptionToContext: Local function used while unrolling exceptions to add the current exception to context
+// collection, then recursively throw until no longer nested
 namespace FIQCPPBASE {
 	namespace Exceptions {
 		namespace {
-			void AddExceptionToMap(std::map<unsigned char,std::string>& Tgt, const std::exception& e, unsigned char depth) {
-				Tgt.emplace(depth, e.what());
-				if(depth < 255) { // Should never need to exceed this value
-					try {
-						std::rethrow_if_nested(e);
-					}
-					catch(const std::exception& ee) {AddExceptionToMap(Tgt, ee, ++depth);}
+			void AddExceptionToVector(std::vector<std::string>& Tgt, const std::exception& e) {
+				Tgt.emplace_back(e.what());
+				try {
+					std::rethrow_if_nested(e);
 				}
+				catch(const std::exception& ee) {AddExceptionToVector(Tgt, ee);}
 			}
-		}
+		};
+	};
+};
+// UnrollException: Unroll nested exceptions into context collection
+_Check_return_ LogMessage::ContextEntries Exceptions::UnrollException(const std::exception& e) noexcept {
+	// Create a vector of exception details (ordered from outermost to innermost):
+	std::vector<std::string> exceptions;
+	Exceptions::AddExceptionToVector(exceptions, e);
+
+	// Now create vector of context entries, and move strings into it (from innermost to outermost):
+	LogMessage::ContextEntries retval;
+	retval.reserve(exceptions.size());
+	for(auto seek = exceptions.rbegin(); seek != exceptions.rend(); ++seek) {
+		retval.emplace_back(seek == exceptions.rbegin() ? "Caught" : "From", std::move(*seek));
 	}
-}
-// UnrollExceptionMap: Unroll nested exceptions into a map of strings indexed by depth
-_Check_return_ std::map<unsigned char,std::string> Exceptions::UnrollExceptionMap(const std::exception& e) noexcept {
-	std::map<unsigned char,std::string> retval;
-	Exceptions::AddExceptionToMap(retval, e, 0);
 	return retval;
 }
 // UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
 _Check_return_ std::string Exceptions::UnrollExceptionString(const std::exception& e) noexcept {
 
-	// Start by unrolling exceptions into map:
-	std::map<unsigned char,std::string> exmap;
-	Exceptions::AddExceptionToMap(exmap, e, 0);
+	// Create a vector of exception details (ordered from outermost to innermost):
+	std::vector<std::string> exceptions;
+	Exceptions::AddExceptionToVector(exceptions, e);
 
-	// Now concatenate map entries into string:
+	// Now concatenate collection entries into string (from innermost to outermost):
 	std::string retval;
-	char temp[20] = { '\n', '\t', 0 }; size_t templen = 2;
-	for(auto seek = exmap.crbegin(); seek != exmap.crend(); ++seek, templen = 2) {
+	char temp[20] = { '\n', '\t', 0 };
+	size_t templen = 2;
+	int i = 0;
+	for(auto seek = exceptions.crbegin(); seek != exceptions.crend(); ++seek, ++i, templen = 2) {
 		// Add newline, tab, depth and space (format local temp buffer first before appending
-		// to string to cut down on string reallocations):
-		templen += StringOps::Decimal::FlexWriteString(temp + 2, seek->first);
+		// to string to cut down on string reallocations, though we will wind up reallocating
+		// at least once per iteration):
+		templen += StringOps::Decimal::FlexWriteString(temp + 2, i);
 		temp[templen++] = ' ';
+		retval.reserve(retval.size() + templen + seek->length());
 		retval.append(temp, templen);
-		retval.append(seek->second);
+		retval.append(*seek);
 	}
 	return retval;
 }
-

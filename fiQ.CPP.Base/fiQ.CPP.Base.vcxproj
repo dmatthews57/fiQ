@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LOGGING\ConsoleSink.h" />
+    <ClInclude Include="LOGGING\FileSink.h" />
     <ClInclude Include="LOGGING\LogMessage.h" />
     <ClInclude Include="LOGGING\LogMessageBuilder.h" />
     <ClInclude Include="LOGGING\LogMessageTemplate.h" />

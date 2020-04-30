@@ -16,11 +16,11 @@ template<size_t N, // Placeholder count dictated by LogMessageTemplate (provided
 class LogMessageBuilder {
 public:
 
-	// Build function: Construct and return a LogMessage object using my template and parameters
-	std::unique_ptr<LogMessage> Build(_In_opt_z_ const char* fname = nullptr) const;
+	// Build: Apply parameters to template to construct a LogMessage object
+	std::unique_ptr<LogMessage> Build(LogMessage::ContextEntries&& context) const;
 
-	constexpr LogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level, T&& t) noexcept
-		: lt(_lt), level(_level), runtimeargs(t) {
+	constexpr LogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt, T&& t) noexcept
+		: level(_level), lt(_lt), runtimeargs(t) {
 		// Ensure number of arguments received by constructor matches expected number of placeholders in
 		// message template (done with static_assert instead of SFINAE to provide friendlier error):
 		static_assert(std::tuple_size_v<T> == N, "Mismatch between number of arguments and template placeholders");
@@ -29,9 +29,9 @@ public:
 private:
 
 	// Private members - set at construction
-	const LogMessageTemplate& lt; // Private reference to static format template for this log message
 	const LogLevel level; // Level associated with this message
-	T runtimeargs; // Tuple of runtime arguments to be applied to template placeholder
+	const LogMessageTemplate& lt; // Private reference to static format template for this log message
+	const T runtimeargs; // Tuple of runtime arguments to be applied to template placeholder
 
 	//======================================================================================================================
 	// Element size calculation functions - used by ElementSize functions to determine approximate length of element:
@@ -146,40 +146,35 @@ private:
 };
 
 //==========================================================================================================================
-// LogMessageBuilder<0>: Partial specialization of class for messages with zero placeholders (static log message)
+// LogMessageBuilder<0>: Partial specialization of class for messages with zero placeholders (i.e. static log messages)
 template<typename T> // Tuple of logging arguments (unused in this specialization)
 class LogMessageBuilder<0,T> {
 public:
-	constexpr std::unique_ptr<LogMessage> Build(_In_opt_z_ const char* fname = nullptr) const;
-	constexpr LogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level) : lt(_lt), level(_level) {}
+	constexpr std::unique_ptr<LogMessage> Build(LogMessage::ContextEntries&& context) const;
+	constexpr LogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt) : level(_level), lt(_lt){}
 private:
-	const LogMessageTemplate& lt;
 	const LogLevel level;
+	const LogMessageTemplate& lt;
 };
 
 
 //==========================================================================================================================
 // LogMessageBuilder<N>::Build: Construct LogMessage by applying runtime arguments to template:
 template<size_t N, typename T>
-inline std::unique_ptr<LogMessage> LogMessageBuilder<N,T>::Build(_In_opt_z_ const char* fname) const {
-	// Declare local variables to hold data, reserve expected sizes:
+inline std::unique_ptr<LogMessage> LogMessageBuilder<N,T>::Build(LogMessage::ContextEntries&& context) const {
+	// Create local string to hold data and pre-reserve expected length:
 	std::string message;
 	message.reserve(ElementSizes());
-	LogMessage::ContextEntries context;
-	// If function name provided, reserve extra space in context and add:
-	context.reserve(lt.PlaceholderCount() + (fname ? 1 : 0));
-	if(fname) context.emplace_back(std::piecewise_construct, std::forward_as_tuple("FUNC"), std::forward_as_tuple(fname));
-	// Apply arguments to local variables, then move to named constructor of LogMessage:
+	// Create temporary buffer for quick formatting of elements, then apply elements to format:
 	char temp[LogMessageTemplate::MAX_PLACEHOLDER_LEN + 5] = {0};
 	BuildElements(temp, message, context);
+	// Move locals into constructor of LogMessage and return:
 	return LogMessage::Create(level, std::move(message), std::move(context));
 }
 // LogMessageBuilder<0>::Build: Construct LogMessage by directly passing static template string:
 template<typename T>
-inline constexpr std::unique_ptr<LogMessage> LogMessageBuilder<0,T>::Build(_In_opt_z_ const char* fname) const {
-	auto l = LogMessage::Create(level, lt.Token(0), lt.TokenLength(0));
-	if(fname) l->AddContext("FUNC", fname);
-	return l;
+inline constexpr std::unique_ptr<LogMessage> LogMessageBuilder<0,T>::Build(LogMessage::ContextEntries&& context) const {
+	return LogMessage::Create(level, lt.Token(0), lt.TokenLength(0), std::move(context));
 }
 
 //==========================================================================================================================
@@ -200,15 +195,14 @@ struct ValidLogArguments : std::conjunction<ValidLogArgument<Args>...> {};
 // (receives token count of LogMessageTemplate via explicit template parameter in order to allow compile-time
 // validation of arguments received against placeholders in template):
 template<size_t PlaceholderCount, typename...Args>
-const auto CreateLogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level, Args&&... args) noexcept {
-	const auto a = std::forward_as_tuple(args...);
+const auto CreateLogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt, Args&&... args) noexcept {
 	static_assert(ValidLogArguments<Args...>::value, "Invalid arguments found in list");
-	return LogMessageBuilder<PlaceholderCount, std::tuple<Args...>>(_lt, _level, a);
+	return LogMessageBuilder<PlaceholderCount, std::tuple<Args...>>(_level, _lt, std::forward_as_tuple(args...));
 }
 // Partial specialization for creating builder with no runtime arguments
 template<size_t N>
-constexpr auto CreateLogMessageBuilder(const LogMessageTemplate& _lt, LogLevel _level) noexcept {
-	return LogMessageBuilder<0,void>(_lt, _level);
+constexpr auto CreateLogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt) noexcept {
+	return LogMessageBuilder<0,void>(_level, _lt);
 }
 
 }; // (end namespace FIQCPPBASE)

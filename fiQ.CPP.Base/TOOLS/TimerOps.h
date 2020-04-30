@@ -101,8 +101,8 @@ private:
 				return GetTimerExecutor().TimerThreadExec();
 			}
 			catch(const std::exception& e) {
-				LogSink::StdErrLog("WARNING: Timer thread ID %08X caught unhandled exception, exiting:%s",
-					GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
+				const auto exceptioncontext = Exceptions::UnrollException(e);
+				LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Fatal, &exceptioncontext, "Thread caught unhandled exception, exiting");
 				return 99;
 			}
 		}

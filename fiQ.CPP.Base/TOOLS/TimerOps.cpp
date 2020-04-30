@@ -66,7 +66,7 @@ TimerHandle::TimerExecutor::~TimerExecutor() noexcept(false) {
 }
 // TimerExecutor::TimerThreadExec: For lifetime of timer system, pick up and execute functions
 unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
-	LogSink::StdErrLog("Timer thread %08X started", GetCurrentThreadId()); // TODO: Debug log instead
+	LOG_FROM_TEMPLATE(LogLevel::Debug, "Timer thread started");
 	while(ThreadsShouldRun) {
 
 		// Look for expired timers ready to execute:
@@ -105,8 +105,8 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 			}
 		}
 		catch(const std::exception& e) {
-			LogSink::StdErrLog("WARNING: Timer thread ID %08X exception polling timers:%s",
-				GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
+			const auto exceptioncontext = Exceptions::UnrollException(e);
+			LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Error, &exceptioncontext, "Exception polling timers");
 		}
 
 		// If we located a function to execute (and shutdown has not been flagged), do so now:
@@ -115,8 +115,8 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 				ToExec->Exec();
 			}
 			catch(const std::exception& e) {
-				LogSink::StdErrLog("WARNING: Timer thread ID %08X caught exception from function:%s",
-					GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
+				const auto exceptioncontext = Exceptions::UnrollException(e);
+				LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Error, &exceptioncontext, "Exception caught from function");
 			}
 			ToExec = nullptr;
 		}
@@ -125,7 +125,7 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 		// there are no functions waiting to execute)
 		if(ThreadsShouldRun) Sleep(5);
 	}
-	LogSink::StdErrLog("Timer thread %08X stopped", GetCurrentThreadId()); // TODO: Debug log instead
+	LOG_FROM_TEMPLATE(LogLevel::Debug, "Timer thread stopped");
 	return 0;
 }
 

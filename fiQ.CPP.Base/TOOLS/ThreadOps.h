@@ -116,14 +116,18 @@ protected:
 	void ThreadClearEventFlag();
 
 	//======================================================================================================================
-	// Public constructor/destructor
-	ThreadOperator() noexcept : TO_QueueLock(TO_ShouldRun) {}
-	~ThreadOperator() noexcept(false); // Non-virtual (don't allow deletion of objects through ThreadOperator pointer)
 	// Deleted copy/move constructors and assignment operators
 	ThreadOperator(const ThreadOperator&) = delete;
 	ThreadOperator(ThreadOperator&&) = delete;
 	ThreadOperator& operator=(const ThreadOperator&) = delete;
 	ThreadOperator& operator=(ThreadOperator&&) = delete;
+
+protected:
+
+	//======================================================================================================================
+	// Protected constructor/destructor
+	ThreadOperator() noexcept : TO_QueueLock(TO_ShouldRun) {}
+	~ThreadOperator() noexcept(false); // Non-virtual (don't allow deletion of objects through ThreadOperator pointer)
 
 private:
 
@@ -146,8 +150,8 @@ private:
 			return MyObject->ThreadExecute();
 		}
 		catch(const std::exception& e) {
-			LogSink::StdErrLog("WARNING: Thread ID %08X caught unhandled exception, exiting:%s",
-				GetCurrentThreadId(), Exceptions::UnrollExceptionString(e).c_str());
+			const auto exceptioncontext = Exceptions::UnrollException(e);
+			LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Fatal, &exceptioncontext, "Thread caught unhandled exception, exiting");
 			return 99;
 		}
 	}
@@ -211,12 +215,15 @@ inline ThreadOperator<T>::~ThreadOperator() noexcept(false) {
 	// if child class failed to do so, allowing destruction to proceed without at least stopping the worker thread could
 	// potentially cause major problems, so attempt to perform shutdown now:
 	if(TO_ThreadHandle > 0) {
-		LogSink::StdErrLog("WARNING: Thread ID %08X destructing without shutdown, attempting now", GetThreadId(TO_ThreadHandle));
+		LogSink::StdErrLog(
+			"WARNING: Thread ID %08X destructing without shutdown, attempting now", GetThreadId(TO_ThreadHandle));
 		TO_ShouldRun = false;
 		TO_QueueLock.Invalidate(); // Ensure any thread waiting on lock gives up
 		if(TO_EventHandle != NULL) SetEvent(TO_EventHandle);
-		if(WaitForSingleObject(TO_ThreadHandle, 1000) != WAIT_OBJECT_0)
-			LogSink::StdErrLog("WARNING: Thread ID %08X shutdown failed, destruction will proceed", GetCurrentThreadId());
+		if(WaitForSingleObject(TO_ThreadHandle, 1000) != WAIT_OBJECT_0) {
+			LogSink::StdErrLog(
+				"WARNING: Thread ID %08X shutdown failed, destruction will proceed", GetThreadId(TO_ThreadHandle));
+		}
 		CloseHandle(TO_ThreadHandle);
 	}
 	if(TO_EventHandle != NULL) CloseHandle(TO_EventHandle);

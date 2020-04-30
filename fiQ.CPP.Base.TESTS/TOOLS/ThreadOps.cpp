@@ -27,7 +27,7 @@ namespace fiQCPPBaseTESTS
 		ThreadTest(ThreadTest&&) = delete;
 		ThreadTest& operator=(const ThreadTest&) = delete;
 		ThreadTest& operator=(ThreadTest&&) = delete;
-		virtual ~ThreadTest() = default;
+		~ThreadTest() = default;
 
 	private:
 		unsigned int ThreadExecute() override {

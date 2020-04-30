@@ -6,6 +6,7 @@
 #include <comdef.h>
 #include <errhandlingapi.h>
 #include <stdexcept>
+#include "Logging/LogMessage.h"
 #include "Tools/StringOps.h"
 
 // FORMAT_RUNTIME_ERROR: Helper macro for producing runtime_error object from string literal with information on throw site
@@ -42,10 +43,11 @@ namespace FIQCPPBASE {
 		// - Usage: SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 		LONG UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep);
 
-		// UnrollExceptionMap: Unroll nested exceptions into a map of strings indexed by depth
-		_Check_return_ std::map<unsigned char,std::string> UnrollExceptionMap(const std::exception& e) noexcept;
+		// UnrollException: Unroll nested exceptions into context collection
+		_Check_return_ LogMessage::ContextEntries UnrollException(const std::exception& e) noexcept;
 
-		// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
+		// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string (each exception prefixed with
+		// newline, tab and depth counter, e.g. "\n\t0 Exception text\n\t1 First chance\n\t2 Second chance"...etc)
 		_Check_return_ std::string UnrollExceptionString(const std::exception& e) noexcept;
 
 	}; // (end namespace Exceptions)
