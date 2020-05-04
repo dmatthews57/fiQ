@@ -91,23 +91,25 @@ protected:
 
 	//======================================================================================================================
 	// Thread management functions
-	bool ThreadStart(int Priority = THREAD_PRIORITY_NORMAL);
+	_Check_return_ bool ThreadStart(int Priority = THREAD_PRIORITY_NORMAL);
 	void ThreadFlagStop();
-	bool ThreadWaitStop(int Timeout = INFINITE);
-	bool ThreadIsStopped() const noexcept;
+	_Check_return_ bool ThreadWaitStop(int Timeout = INFINITE);
+	_Check_return_ bool ThreadIsStopped() const noexcept;
 
 	//======================================================================================================================
 	// Thread worker queue management functions
-	size_t ThreadQueueWork(ThreadWorkUnit&& work);
+	size_t ThreadQueueWork(ThreadWorkUnit&& work); // Move already-constructed object into queue
 	template<typename...Args, std::enable_if_t<std::is_constructible_v<T, Args...>, int> = 0>
 	size_t ThreadQueueWork(Args&&...args);
-	size_t ThreadQueueSize() const; // Note: not thread-safe, use with care
+	_Check_return_ bool ThreadQueueEmpty() const noexcept; // Note: not thread-safe, use with care
+	_Check_return_ size_t ThreadQueueSize() const noexcept; // Note: not thread-safe, use with care
 
 	//======================================================================================================================
 	// Worker thread accessor functions
 	_Check_return_ bool ThreadShouldRun() const noexcept;
 	bool ThreadWaitEvent(int Timeout = INFINITE) const;
-	bool ThreadDequeueWork(ThreadWorkUnit& work);
+	bool ThreadDequeueWork(ThreadWorkUnit& work) noexcept(false);
+	bool ThreadUnsafeDequeueWork(ThreadWorkUnit& work) noexcept(false); // Note: not thread-safe, see remarks
 	void ThreadRequeueWork(ThreadWorkUnit&& work);
 
 	//======================================================================================================================
@@ -230,8 +232,8 @@ inline ThreadOperator<T>::~ThreadOperator() noexcept(false) {
 }
 // ThreadOperator::ThreadStart: Launch worker thread
 template<typename T>
-GSL_SUPPRESS(type.4) // C-style cast of beginthreadex return value required (it is defined as unsigned but may return -1)
-inline bool ThreadOperator<T>::ThreadStart(int Priority) {
+GSL_SUPPRESS(type.4) // C-style cast of beginthreadex return value required (it is defined as unsigned, but may return -1)
+inline _Check_return_ bool ThreadOperator<T>::ThreadStart(int Priority) {
 	if(TO_ThreadHandle > 0 || TO_EventHandle != NULL) return false;
 	TO_ShouldRun = true;
 	TO_QueueLock.Init();
@@ -256,7 +258,7 @@ inline void ThreadOperator<T>::ThreadFlagStop() {
 }
 // ThreadOperator::ThreadWaitStop: Inform worker thread it should stop, wait for it to do so
 template<typename T>
-inline bool ThreadOperator<T>::ThreadWaitStop(int Timeout) {
+inline _Check_return_ bool ThreadOperator<T>::ThreadWaitStop(int Timeout) {
 	// Set thread status flag, trigger event to ensure sleeping threads wake up:
 	TO_ShouldRun = false;
 	TO_QueueLock.Invalidate(); // Ensure any thread waiting on lock gives up
@@ -283,7 +285,7 @@ inline bool ThreadOperator<T>::ThreadWaitStop(int Timeout) {
 }
 // ThreadOperator::ThreadIsStopped: Check whether thread handle has been closed (indicating it has stopped)
 template<typename T>
-inline bool ThreadOperator<T>::ThreadIsStopped() const noexcept {
+inline _Check_return_ bool ThreadOperator<T>::ThreadIsStopped() const noexcept {
 	return (TO_ThreadHandle <= 0);
 }
 // ThreadOperator::ThreadQueueWork: Add unit of work to back of queue
@@ -315,7 +317,10 @@ inline size_t ThreadOperator<T>::ThreadQueueWork(Args&&...args) {
 }
 // ThreadOperator::ThreadQueueSize: Return current depth of work queue (note this function is not thread-safe)
 template<typename T>
-inline size_t ThreadOperator<T>::ThreadQueueSize() const {return TO_WorkQueue.size();}
+inline _Check_return_ size_t ThreadOperator<T>::ThreadQueueSize() const noexcept {return TO_WorkQueue.size();}
+// ThreadOperator::ThreadQueueEmpty: Check if work queue is currently empty (note this function is not thread-safe)
+template<typename T>
+inline _Check_return_ bool ThreadOperator<T>::ThreadQueueEmpty() const noexcept {return TO_WorkQueue.empty();}
 // ThreadOperator::ThreadShouldRun: Checks status of flag indicating whether thread should continue executing
 template<typename T>
 _Check_return_ bool ThreadOperator<T>::ThreadShouldRun() const noexcept {return TO_ShouldRun;}
@@ -327,7 +332,7 @@ inline bool ThreadOperator<T>::ThreadWaitEvent(int Timeout) const {
 }
 // ThreadOperator::ThreadDequeueWork: Retrieve work item from front of queue
 template<typename T>
-inline bool ThreadOperator<T>::ThreadDequeueWork(ThreadWorkUnit& work) {
+inline bool ThreadOperator<T>::ThreadDequeueWork(ThreadWorkUnit& work) noexcept(false) {
 	bool rc = false;
 	// Ensure target pointer is cleared first, to shorten potential time in lock
 	work.reset(nullptr);
@@ -344,7 +349,20 @@ inline bool ThreadOperator<T>::ThreadDequeueWork(ThreadWorkUnit& work) {
 	}
 	return rc;
 }
-// ThreadOperator::ThreadRequeueWork: Places work item back at front of queue
+// ThreadOperator::ThreadUnsafeDequeueWork: Retrieve work item from front of queue without locking
+// - NOTE this function is deliberately not thread-safe; use it inside worker thread only
+// - Thread-unsafe access is provided to allow clearing of queue during shutdown, when locking is impossible
+template<typename T>
+inline bool ThreadOperator<T>::ThreadUnsafeDequeueWork(ThreadWorkUnit& work) noexcept(false) {
+	if(TO_WorkQueue.empty() == false) {
+		// Move ownership of item at front of queue to target pointer:
+		work = std::move(TO_WorkQueue.front());
+		TO_WorkQueue.pop_front();
+		return true;
+	}
+	else return false;
+}
+// ThreadOperator::ThreadRequeueWork: Returns work item to front of queue for reprocessing
 template<typename T>
 inline void ThreadOperator<T>::ThreadRequeueWork(ThreadWorkUnit&& work) {
 	auto lock = Locks::Acquire(TO_QueueLock);

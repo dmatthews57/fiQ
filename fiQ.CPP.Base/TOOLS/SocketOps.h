@@ -19,14 +19,14 @@ enum class SocketFlags : unsigned short {
 	None = 0x0000,			// Default/empty flag value
 	ExtendedHeader = 0x0001	// Packets using extended 4-byte header (2 length bytes, 2 control bytes)
 };
-inline SocketFlags operator|(SocketFlags a, SocketFlags b) noexcept {
+inline constexpr SocketFlags operator|(SocketFlags a, SocketFlags b) noexcept {
 	return static_cast<SocketFlags>(
 		static_cast<std::underlying_type_t<SocketFlags> >(a) | static_cast<std::underlying_type_t<SocketFlags> >(b));
 }
-inline SocketFlags operator|=(SocketFlags& a, SocketFlags b) noexcept {
+inline constexpr SocketFlags operator|=(SocketFlags& a, SocketFlags b) noexcept {
 	return (a = (a | b));
 }
-inline bool operator&(SocketFlags a, SocketFlags b) noexcept {
+inline constexpr bool operator&(SocketFlags a, SocketFlags b) noexcept {
 	return ((static_cast<std::underlying_type_t<SocketFlags> >(a) & static_cast<std::underlying_type_t<SocketFlags> >(b)) != 0);
 }
 

@@ -30,19 +30,19 @@ enum class LogEnrichers : unsigned short {
 	ThreadID = 0x0001	// Add ThreadID to all LogMessages
 };
 using LogEnrichersType = std::underlying_type_t<LogEnrichers>;
-inline LogEnrichers operator|(LogEnrichers a, LogEnrichers b) noexcept {
+inline constexpr LogEnrichers operator|(LogEnrichers a, LogEnrichers b) noexcept {
 	return static_cast<LogEnrichers>(static_cast<LogEnrichersType>(a) | static_cast<LogEnrichersType>(b));
 }
-inline LogEnrichers operator|=(LogEnrichers& a, LogEnrichers b) noexcept {
+inline constexpr LogEnrichers operator|=(LogEnrichers& a, LogEnrichers b) noexcept {
 	return (a = (a | b));
 }
-inline bool operator&(LogEnrichers a, LogEnrichers b) noexcept {
+inline constexpr bool operator&(LogEnrichers a, LogEnrichers b) noexcept {
 	return ((static_cast<LogEnrichersType>(a) & static_cast<LogEnrichersType>(b)) != 0);
 }
-inline LogEnrichers operator&=(LogEnrichers& a, LogEnrichers b) noexcept {
+inline constexpr LogEnrichers operator&=(LogEnrichers& a, LogEnrichers b) noexcept {
 	return (a = static_cast<LogEnrichers>(static_cast<LogEnrichersType>(a) & static_cast<LogEnrichersType>(b)));
 }
-inline LogEnrichers operator~(LogEnrichers a) noexcept {
+inline constexpr LogEnrichers operator~(LogEnrichers a) noexcept {
 	return static_cast<LogEnrichers>(~(static_cast<LogEnrichersType>(a)));
 }
 

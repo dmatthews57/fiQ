@@ -15,6 +15,9 @@
     <Filter Include="TestFiles">
       <UniqueIdentifier>{85dd23c0-3b98-4d22-9de5-b9c0afca4d1f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Logging">
+      <UniqueIdentifier>{02ffe143-718d-46d8-93b2-76ffeaa10814}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TOOLS\ValueOps.cpp">
@@ -52,6 +55,9 @@
     </ClCompile>
     <ClCompile Include="TOOLS\SteadyClock.cpp">
       <Filter>Source Files\Tools</Filter>
+    </ClCompile>
+    <ClCompile Include="LOGGING\LogMessageBuilder.cpp">
+      <Filter>Source Files\Logging</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

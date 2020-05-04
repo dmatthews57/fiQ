@@ -15,7 +15,7 @@ public:
 
 	//======================================================================================================================
 	// Open function for unique_ptr to file
-	static FilePtr OpenFile(_In_z_ const char* FileName, _In_z_ const char* Mode, int ShFlag = _SH_DENYRD) {
+	static FilePtr OpenFile(_In_z_ const char* FileName, _In_z_ const char* Mode, int ShFlag = _SH_DENYRW) {
 		return FilePtr(_fsopen(FileName, Mode, ShFlag), fclose);
 	}
 

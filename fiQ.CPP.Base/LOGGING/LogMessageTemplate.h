@@ -25,6 +25,7 @@ public:
 	constexpr size_t PlaceholderLen(size_t n) const {return ((n * 2) + 1) < tokencount ? tokenlengths[(n * 2) + 1] : 0;}
 	constexpr Format PlaceholderFormat(size_t n) const {return (n < (tokencount / 2)) ? placeholderformats[n] : Format::String;}
 	constexpr size_t PlaceholderPrecision(size_t n) const {return (n < (tokencount / 2)) ? placeholderprecision[n] : 0;}
+	constexpr FormatEscape EscapeFormats() const {return escapeformats;}
 
 	// Public constructor - takes a string literal with up to MAX_PLACEHOLDERS
 	// - Should be evaluated at compile-time, to ensure it is in a valid format (do static assert on IsValid)
@@ -97,11 +98,15 @@ public:
 							}
 							break;
 						}
-						// Only alphanumeric characters valid for placeholder names:
-						else valid = StringOps::IsAlphaNumChar(*ptr);
+						else {
+							// Still in placeholder name; only alphanumeric characters are valid:
+							valid = StringOps::IsAlphaNumChar(*ptr);
+							escapeformats |= StringOps::NeedsEscape(*ptr);
+						}
 					}
 				}
-				// (else continue reading message text)
+				// Otherwise, character is part of literal template text; check for escaping requirements:
+				else escapeformats |= StringOps::NeedsEscape(*ptr);
 			}
 
 			// If placeholder was started but not finished, this string was invalid:
@@ -136,6 +141,7 @@ private:
 	
 	size_t tokencount = 0;	// Count of entries in tokens/tokenlengths
 	bool valid = false;		// Flag indicating whether format string is valid
+	FormatEscape escapeformats = FormatEscape::None; // Formats for which literals require character escaping
 };
 
 }; // (end namespace FIQCPPBASE)

@@ -20,7 +20,7 @@ public:
 	std::unique_ptr<LogMessage> Build(LogMessage::ContextEntries&& context) const;
 
 	constexpr LogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt, T&& t) noexcept
-		: level(_level), lt(_lt), runtimeargs(t) {
+		: level(_level), lt(_lt), runtimeargs(t), escapeformats(_lt.EscapeFormats()) {
 		// Ensure number of arguments received by constructor matches expected number of placeholders in
 		// message template (done with static_assert instead of SFINAE to provide friendlier error):
 		static_assert(std::tuple_size_v<T> == N, "Mismatch between number of arguments and template placeholders");
@@ -32,6 +32,7 @@ private:
 	const LogLevel level; // Level associated with this message
 	const LogMessageTemplate& lt; // Private reference to static format template for this log message
 	const T runtimeargs; // Tuple of runtime arguments to be applied to template placeholder
+	mutable FormatEscape escapeformats; // Formats for which LogMessage will require character escaping
 
 	//======================================================================================================================
 	// Element size calculation functions - used by ElementSize functions to determine approximate length of element:
@@ -78,7 +79,7 @@ private:
 	template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 	static constexpr std::pair<const char*,size_t> FormatElement(
 		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf, T t,
-		LogMessageTemplate::Format format, size_t precision) {
+		LogMessageTemplate::Format format, size_t precision, FormatEscape&) {
 		// Write integral value to preallocated buffer, returning buffer and bytes written:
 		if(format == LogMessageTemplate::Format::Hex) return StringOps::Ascii::FlexWriteString(buf, t, precision);
 		else if(precision > 0) return StringOps::Decimal::FlexWriteString(buf, t, precision);
@@ -87,24 +88,28 @@ private:
 	template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
 	static constexpr std::pair<const char*,size_t> FormatElement(
 		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf, T t,
-		LogMessageTemplate::Format, size_t precision) {
+		LogMessageTemplate::Format, size_t precision, FormatEscape&) {
 		// Write float value into preallocated buffer, returning buffer and bytes written:
 		return StringOps::Float::FlexWriteString(buf, t, precision);
 	}
 	template<typename T, std::enable_if_t<std::is_same_v<std::string,T>, int> = 0>
 	static constexpr std::pair<const char*,size_t> FormatElement(char*, // Preallocated buffer not required
-		const T& t, LogMessageTemplate::Format, size_t precision) {
-		return { t.data(), ValueOps::Bounded<size_t>(0, t.length(), precision) };
+		const T& t, LogMessageTemplate::Format, size_t precision, FormatEscape& escapeformats) {
+		const size_t len = ValueOps::Bounded<size_t>(0, t.length(), precision);
+		for(size_t s = 0; s < len; ++s) escapeformats |= StringOps::NeedsEscape(t.at(s));
+		return { t.data(), len };
 	}
 	template<typename T, std::enable_if_t<std::is_same_v<std::remove_const_t<T>, char>, int> = 0>
 	static constexpr std::pair<const char*,size_t> FormatElement(char*, // Preallocated buffer not required
-		const T* t, LogMessageTemplate::Format, size_t precision) {
-		return { t, ValueOps::Bounded<size_t>(0, strlen(t), precision) };
+		const T* t, LogMessageTemplate::Format, size_t precision, FormatEscape& escapeformats) {
+		const size_t len = ValueOps::Bounded<size_t>(0, strlen(t), precision);
+		for(size_t s = 0; s < len; ++s) escapeformats |= StringOps::NeedsEscape(t[s]);
+		return { t, len };
 	}
 
 	//======================================================================================================================
 	// Element construction functions - called during Build to apply template and parameters to output string and context
-	template<size_t s, std::enable_if_t<(s > (N + N)), int> = 0> // Terminal case
+	template<size_t s, std::enable_if_t<(s > (N + N)), int> = 0> // Terminal case, end of tuple reached
 	void BuildElement(char*, std::string&, LogMessage::ContextEntries&) const noexcept(false) {}
 	template<size_t s, std::enable_if_t<(s <= (N + N) && (s % 2) != 0), int> = 0> // Placeholder case
 	GSL_SUPPRESS(con.4) // "arg" value below is sometimes pointer, sometimes not - can't always be const const
@@ -116,7 +121,7 @@ private:
 		const auto phformat = lt.PlaceholderFormat(s / 2);
 		const size_t phprecision = lt.PlaceholderPrecision(s / 2);
 		// Format argument (using preallocated buffer, if required) and capture data/length:
-		const std::pair<const char*,size_t> phvalue = FormatElement(buf, arg, phformat, phprecision);
+		const std::pair<const char*,size_t> phvalue = FormatElement(buf, arg, phformat, phprecision, escapeformats);
 		if(phvalue.second) { // Ignore zero-length values
 			message.append(phvalue.first, phvalue.second); // Append to member string
 			// If this is a named placeholder, add it to context collection:
@@ -169,12 +174,12 @@ inline std::unique_ptr<LogMessage> LogMessageBuilder<N,T>::Build(LogMessage::Con
 	char temp[LogMessageTemplate::MAX_PLACEHOLDER_LEN + 5] = {0};
 	BuildElements(temp, message, context);
 	// Move locals into constructor of LogMessage and return:
-	return LogMessage::Create(level, std::move(message), std::move(context));
+	return LogMessage::Create(level, std::move(message), std::move(context), escapeformats);
 }
 // LogMessageBuilder<0>::Build: Construct LogMessage by directly passing static template string:
 template<typename T>
 inline constexpr std::unique_ptr<LogMessage> LogMessageBuilder<0,T>::Build(LogMessage::ContextEntries&& context) const {
-	return LogMessage::Create(level, lt.Token(0), lt.TokenLength(0), std::move(context));
+	return LogMessage::Create(level, lt.Token(0), lt.TokenLength(0), std::move(context), lt.EscapeFormats());
 }
 
 //==========================================================================================================================

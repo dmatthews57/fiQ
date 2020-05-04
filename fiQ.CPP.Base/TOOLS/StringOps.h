@@ -7,11 +7,39 @@
 
 namespace FIQCPPBASE {
 
+//==========================================================================================================================
+// Public definitions - Formatting escape flags with overloaded operators for binary flag operations
+enum class FormatEscape : unsigned char {
+	None = 0x00,	// String/character does not require escaping
+	JSON = 0x01,	// String/character requires escaping if formatted to JSON
+	XML = 0x02		// String/character requires escaping if formatted to XML
+};
+using FormatEscapeType = std::underlying_type_t<FormatEscape>;
+inline constexpr FormatEscape operator|(FormatEscape a, FormatEscape b) noexcept {
+	return static_cast<FormatEscape>(static_cast<FormatEscapeType>(a) | static_cast<FormatEscapeType>(b));
+}
+inline constexpr FormatEscape operator|=(FormatEscape& a, FormatEscape b) noexcept {
+	return (a = (a | b));
+}
+inline constexpr bool operator&(FormatEscape a, FormatEscape b) noexcept {
+	return ((static_cast<FormatEscapeType>(a) & static_cast<FormatEscapeType>(b)) != 0);
+}
+
 class StringOps
 {
 public:
 
 	//======================================================================================================================
+	// Generic string/character functions
+	//======================================================================================================================
+	// IsAlphaChar: Check if character is a letter (upper or lower case)
+	_Check_return_ static constexpr bool IsAlphaChar(char c) noexcept {
+		return (ValueOps::Is(c).InRange('A','Z') ? true : ValueOps::Is(c).InRange('a','z'));
+	}
+	// IsAlphaNumChar: Check if character is a letter or number
+	_Check_return_ static constexpr bool IsAlphaNumChar(char c) noexcept {
+		return (IsAlphaChar(c) ? true : Decimal::IsDecChar(c));
+	}
 	// BytesAvail: Calculate number of bytes available between "CurrPtr" and "EndPtr"
 	_Check_return_ static constexpr size_t BytesAvail(_In_opt_ const char* CurrPtr, _In_ const char* EndPtr) noexcept {
 		return (CurrPtr && EndPtr ? (CurrPtr <= EndPtr ? (EndPtr - CurrPtr) : 0) : 0);
@@ -252,8 +280,9 @@ public:
 			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) noexcept(false) {
-			return t < 0 ? (Tgt[0] = '-', 1 + ExWriteString<len - 1>(Tgt + 1, static_cast<std::make_unsigned_t<T> >(-t)))
-				: ExWriteString<len>(Tgt, static_cast<std::make_unsigned_t<T> >(t));
+			return (t < 0) ?
+				(Tgt[0] = '-', 1 + ExWriteString<len - 1>(Tgt + 1, gsl::narrow_cast<std::make_unsigned_t<T> >(-t)))
+				: ExWriteString<len>(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t));
 		}
 
 		//==================================================================================================================
@@ -633,15 +662,52 @@ public:
 		}
 	};
 
-	// IsAlphaChar: Check if character is a letter (upper or lower case)
-	_Check_return_ static constexpr bool IsAlphaChar(char c) noexcept {
-		return (ValueOps::Is(c).InRange('A','Z') ? true : ValueOps::Is(c).InRange('a','z'));
-	}
-	// IsAlphaNumChar: Check if character is a letter or number
-	_Check_return_ static constexpr bool IsAlphaNumChar(char c) noexcept {
-		return (IsAlphaChar(c) ? true : Decimal::IsDecChar(c));
+	//======================================================================================================================
+	// JSON: Helper class for operations related to JSON formatting
+	class JSON {
+	public:
+		_Check_return_ static constexpr bool NeedsEscape(char c) noexcept {
+			return (c == '\"' || c == '\\' || c < 0x20);
+		}
+		_Check_return_ static bool NeedsEscape(const std::string& s) {
+			return (std::find_if(s.cbegin(), s.cend(), [](char c) {return NeedsEscape(c);}) != s.cend());
+		}
+		_Check_return_ static std::string Escape(const std::string& s) {
+			// Create local string variable and reserve enough space to copy source string and add a few escape characters
+			std::string retval;
+			retval.reserve(s.length() + 5);
+			for(auto seek = s.cbegin(); seek != s.cend(); ++seek) {
+				if(NeedsEscape(*seek)) {
+					// Try to minimize string reallocation and copying; reserve 5 additional characters
+					if(retval.length() == retval.capacity()) retval.reserve(retval.length() + 5);
+					if(*seek == '\"') retval += "\\\""; // Double quote
+					else if(*seek == '\\') retval += "\\\\"; // Backslash
+					else if(*seek == '\b') retval += "\\b"; // Backspace
+					else if(*seek == '\t') retval += "\\t"; // Tab
+					else if(*seek == '\f') retval += "\\f"; // Form feed
+					else if(*seek == '\r') retval += "\\r"; // Carriage return
+					else if(*seek == '\n') retval += "\\n"; // Line feed
+					else { // Any other unprintable chars, just format as hex:
+						retval += '\\';
+						retval += Ascii::Char((*seek >> 4) & 0x0f);
+						retval += Ascii::Char(*seek & 0x0f);
+					}
+				}
+				else retval += *seek;
+			}
+			return retval;
+		}
+	};
+
+	//======================================================================================================================
+	// NeedsEscape: Returns mask of formats for which a given character may need escaping
+	_Check_return_ static constexpr FormatEscape NeedsEscape(char c) noexcept {
+		return JSON::NeedsEscape(c) ? FormatEscape::JSON : FormatEscape::None;
+		// ...OR in any other formats supported here in the future...
 	}
 
+	//======================================================================================================================
+	// String trimming functions
 	//======================================================================================================================
 	// TrimLeft: Trim whitespace from left-hand side of std::string
 	// - Returns a std::string by value (copy should be optimized out by compiler)
@@ -724,6 +790,7 @@ public:
 		return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(utf8);
 	}
 
+	//======================================================================================================================
 	// EndOfPath: Compile-time function to determine the length of the path portion of a filename (primarily __FILE__ macro)
 	// - Usage: "__FILE__" + PathLength(__FILE__)" will evaluate to only filename portion of source file
 	static constexpr size_t PathLength(const char * const FullPath, size_t index = 0, size_t last_slash = -1) {

@@ -48,7 +48,7 @@ private:
 				fprintf_s(stderr, "%04d%02d%02d|%02d:%02d:%02d.%03d|%s\n",
 					LocalTime.tm_year + 1900, LocalTime.tm_mon + 1, LocalTime.tm_mday,
 					LocalTime.tm_hour, LocalTime.tm_min, LocalTime.tm_sec, lm->GetTimestamp().GetMilliseconds() % 1000,
-					lm->GetMessage().c_str()
+					lm->GetString().c_str()
 				);
 				const auto context = lm->GetContext();
 				if(context.empty() == false) {
@@ -67,7 +67,7 @@ private:
 					"\x1B[%dm[%03d][%02d:%02d:%02d.%03d] %s\x1B[0m\n",
 					GetConsoleColor(lm->GetLevel()), lm->GetLevel(),
 					LocalTime.tm_hour, LocalTime.tm_min, LocalTime.tm_sec, lm->GetTimestamp().GetMilliseconds() % 1000,
-					lm->GetMessage().c_str());
+					lm->GetString().c_str());
 				const auto context = lm->GetContext();
 				if(context.empty() == false) {
 					for(auto seek = context.begin(); seek != context.end(); ++seek) {

@@ -15,7 +15,7 @@ namespace fiQCPPBaseTESTS
 		TEST_METHOD(BytesRemain)
 		{
 			char temp[10] = {0}, *start = temp, *mid = temp + 2, *end = temp + 10;
-#pragma warning (suppress : 6387)
+			#pragma warning (suppress : 6387)
 			Assert::AreEqual(0ULL, StringOps::BytesAvail(start, nullptr), L"Start-to-nullptr length invalid");
 			Assert::AreEqual(0ULL, StringOps::BytesAvail(nullptr, start), L"Nullptr-to-start length invalid");
 			Assert::AreEqual(10ULL, StringOps::BytesAvail(start, end), L"Start-to-end length invalid");
@@ -298,6 +298,25 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(0, memcmp(temp, "\x12\x34\xAB\xCD", 4), L"Incorrect values written");
 			Assert::AreEqual(8ULL, StringOps::Ascii::UnpackFrom<4>("\x12\x34\xAB\xCD", temp), L"Invalid number of bytes packed");
 			Assert::AreEqual(0, memcmp(temp, "1234ABCD", 8), L"Incorrect values written");
+		}
+
+		TEST_METHOD(JSON)
+		{
+			Assert::AreEqual(false, StringOps::JSON::NeedsEscape('A'), L"Letter should not need escaping");
+			Assert::AreEqual(false, StringOps::JSON::NeedsEscape('z'), L"Letter should not need escaping");
+			Assert::AreEqual(false, StringOps::JSON::NeedsEscape('0'), L"Digit should not need escaping");
+			Assert::AreEqual(false, StringOps::JSON::NeedsEscape('9'), L"Digit should not need escaping");
+			Assert::AreEqual(true, StringOps::JSON::NeedsEscape('\"'), L"Quote should need escaping");
+			Assert::AreEqual(true, StringOps::JSON::NeedsEscape('\\'), L"Backslash should need escaping");
+			Assert::AreEqual(true, StringOps::JSON::NeedsEscape('\x1c'), L"Hex value should need escaping");
+
+			const std::string noescape = "HELLO NO ISSUES HERE",
+				escape = "HELLO\n\tI EXPECT\\ESCAPING\n",
+				escaped = "HELLO\\n\\tI EXPECT\\\\ESCAPING\\n";
+			Assert::AreEqual(false, StringOps::JSON::NeedsEscape(noescape), L"String should not need escaping");
+			Assert::AreEqual(noescape, StringOps::JSON::Escape(noescape), L"String should not have changed");
+			Assert::AreEqual(true, StringOps::JSON::NeedsEscape(escape), L"String should require escaping");
+			Assert::AreEqual(escaped, StringOps::JSON::Escape(escape), L"Incorrect escaped string");
 		}
 
 		TEST_METHOD(Trimming)

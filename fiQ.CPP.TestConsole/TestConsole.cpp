@@ -30,9 +30,8 @@ int main()
 
 	try {
 		LogSink::EnableEnrichers(LogEnrichers::ThreadID);
-		LogSink::AddSink<FileSink>(LogLevel::Debug, FileSink::Config {  });
-		LogSink::AddSink<ConsoleSink>(LogLevel::Error, ConsoleSink::Config {  });
-		LogSink::AddSink<ConsoleSink>(LogLevel::Info, ConsoleSink::Config {  });
+		LogSink::AddSink<FileSink>(LogLevel::Debug, FileSink::Config { FileSink::Format::JSON, FileSink::Rollover::Hourly, "\\TEMP\\LOGS" });
+		LogSink::AddSink<ConsoleSink>(LogLevel::Debug, ConsoleSink::Config { });
 		LogSink::InitializeSinks();
 
 		const LogMessage::ContextEntries ce = {{"SAMPLE1","Whatever1"},{"SAMPLE2",std::string("wHATEVER2")}};
@@ -40,13 +39,13 @@ int main()
 		LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Debug, &ce,
 			"{first:F9} SECOND {second:X9} THIRD {:D} {fourth:S3} FIFTH {fifth:S10} SIXTH {sixth:F22}",
 			7654321.23456789123, 0xFEDCBA0987, 321UL, "literal", temp);
-		LOG_FROM_TEMPLATE(LogLevel::Info, "Message with no placeholders");
-		LOG_FROM_TEMPLATE(LogLevel::Warn, "Message with some placeholders [${amount:F2}][{account}]", 21.50, 30);
+		LOG_FROM_TEMPLATE(LogLevel::Info, "Message with no\x1c placeholders");
+		LOG_FROM_TEMPLATE(LogLevel::Warn, "Message with some \nplaceholders [${amount:F2}][{account}]", 21.50, 30);
 		LOG_FROM_TEMPLATE(LogLevel::Error, "Error with no placeholders");
 		LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Fatal, &ce, "Goodbye, fatal error");
 
-		Outermost();
-
+		//Outermost();
+		Sleep(100);
 		LogSink::CleanupSinks();
 
 		return 0;
