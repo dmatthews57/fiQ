@@ -41,7 +41,7 @@ private:
 	// Base class function implementations
 	void Initialize() noexcept override {} // No initialization required
 	void Cleanup() noexcept override {} // No cleanup required
-	void ReceiveLog(std::unique_ptr<LogMessage>&& lm) override {
+	void ReceiveLog(std::unique_ptr<const LogMessage>&& lm) override {
 		if(lm->GetLevel() >= minlevel) {
 			const tm& LocalTime = lm->GetTimestamp().GetLocalTime();
 			if(lm->GetLevel() >= LogLevel::Fatal) { // Write to stderr in same format as LogSink static function

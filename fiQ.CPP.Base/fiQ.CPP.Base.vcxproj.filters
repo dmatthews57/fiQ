@@ -25,6 +25,12 @@
     <Filter Include="Header Files\Logging">
       <UniqueIdentifier>{8954d7ea-c401-42b7-a2da-e3a3dd59722e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Messages">
+      <UniqueIdentifier>{04c768bd-3129-439e-99d0-29c2f705c496}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Messages">
+      <UniqueIdentifier>{df85e6af-8aab-46fa-8757-8ab0526796d3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -87,6 +93,12 @@
     <ClInclude Include="LOGGING\FileSink.h">
       <Filter>Header Files\Logging</Filter>
     </ClInclude>
+    <ClInclude Include="MESSAGES\RoutableMessage.h">
+      <Filter>Header Files\Messages</Filter>
+    </ClInclude>
+    <ClInclude Include="MESSAGES\HSMRequest.h">
+      <Filter>Header Files\Messages</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -106,6 +118,9 @@
     </ClCompile>
     <ClCompile Include="LOGGING\LogSink.cpp">
       <Filter>Source Files\Logging</Filter>
+    </ClCompile>
+    <ClCompile Include="MESSAGES\HSMRequest.cpp">
+      <Filter>Source Files\Messages</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

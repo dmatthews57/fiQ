@@ -670,7 +670,7 @@ public:
 			return (c == '\"' || c == '\\' || c < 0x20);
 		}
 		_Check_return_ static bool NeedsEscape(const std::string& s) {
-			return (std::find_if(s.cbegin(), s.cend(), [](char c) {return NeedsEscape(c);}) != s.cend());
+			return (std::find_if(s.cbegin(), s.cend(), [](char c) noexcept {return NeedsEscape(c);}) != s.cend());
 		}
 		_Check_return_ static std::string Escape(const std::string& s) {
 			// Create local string variable and reserve enough space to copy source string and add a few escape characters

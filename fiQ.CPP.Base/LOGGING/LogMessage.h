@@ -35,14 +35,14 @@ private: struct pass_key {}; // Private function pass-key definition
 public:
 
 	// Type definitions:
-	using ContextEntry = std::pair<std::string,std::string>;
+	using ContextEntry = std::pair<std::string, std::string>;
 	using ContextEntries = std::vector<ContextEntry>;
 
 	//======================================================================================================================
 	// Named constructor
 	template<typename...Args>
-	static std::unique_ptr<LogMessage> Create(LogLevel _level, Args&&...args) {
-		return std::make_unique<LogMessage>(pass_key(), _level, std::forward<Args>(args)...);
+	static std::unique_ptr<const LogMessage> Create(LogLevel _level, Args&&...args) {
+		return std::make_unique<const LogMessage>(pass_key{}, _level, std::forward<Args>(args)...);
 	}
 
 	//======================================================================================================================

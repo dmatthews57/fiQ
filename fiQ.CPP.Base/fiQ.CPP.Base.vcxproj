@@ -157,6 +157,8 @@
     <ClInclude Include="LOGGING\LogMessageBuilder.h" />
     <ClInclude Include="LOGGING\LogMessageTemplate.h" />
     <ClInclude Include="LOGGING\LogSink.h" />
+    <ClInclude Include="MESSAGES\HSMRequest.h" />
+    <ClInclude Include="MESSAGES\RoutableMessage.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="TOOLS\ConfigFile.h" />
     <ClInclude Include="TOOLS\Exceptions.h" />
@@ -174,6 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LOGGING\LogSink.cpp" />
+    <ClCompile Include="MESSAGES\HSMRequest.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

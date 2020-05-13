@@ -51,7 +51,7 @@ private:
 	};
 
 	// Private member variables:
-	std::shared_ptr<TimerControlBlock> tcb; // Pointer to control block for currently-scheduled timer
+	std::shared_ptr<const TimerControlBlock> tcb; // Pointer to control block for currently-scheduled timer
 
 	//======================================================================================================================
 	// TimerExecutor: Singleton timer execution management class, created once by TimerHandle's static accessor
@@ -63,7 +63,7 @@ private:
 		bool Cleanup();
 
 		// Timer management functions
-		_Check_return_ bool CreateTimer(const std::shared_ptr<TimerControlBlock>& timer) {
+		_Check_return_ bool CreateTimer(const std::shared_ptr<const TimerControlBlock>& timer) {
 			auto lock = Locks::Acquire(OpenTimersLock);
 			if(lock.IsLocked()) return OpenTimers.emplace_back(timer), true;
 			else return false;
@@ -91,7 +91,7 @@ private:
 		HANDLE ThreadHandles[TIMER_THREADS_MAX] = { NULL }; // Array of handles to executing threads
 		bool ThreadsShouldRun;			// Flag to indicate continued running of threads
 		Locks::SpinLock OpenTimersLock;	// Lock to control access to OpenTimers member
-		std::vector<std::weak_ptr<TimerControlBlock>> OpenTimers;	// Collection of currently-scheduled timers
+		std::vector<std::weak_ptr<const TimerControlBlock>> OpenTimers;	// Collection of currently-scheduled timers
 
 		//==================================================================================================================
 		// Worker thread function definition
@@ -124,7 +124,7 @@ inline void TimerHandle::CleanupTimers() {
 // TimerHandle::Start: Create timer control block and add to static manager
 inline bool TimerHandle::Start(std::chrono::steady_clock::duration d, std::function<void()>&& f) {
 	tcb = nullptr; // Ensure any existing timer is orphaned immediately
-	tcb = std::make_shared<TimerControlBlock>(d, std::move(f));
+	tcb = std::make_shared<const TimerControlBlock>(d, std::move(f));
 	return GetTimerExecutor().CreateTimer(tcb) ? true : (tcb = nullptr, false);
 }
 // TimerHandle::Cancel: Clear control block pointer to prevent static manager from executing current function

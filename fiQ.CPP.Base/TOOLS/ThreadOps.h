@@ -42,7 +42,7 @@ public:
 
 	// Locks::Acquire: Helper function to provide template deduction when creating a Guard object
 	template<typename T>
-	_Check_return_ static Guard<T> Acquire(T& lock) {return Guard<T>(pass_key(), lock);}
+	_Check_return_ static Guard<T> Acquire(T& lock) {return Guard<T>(pass_key{}, lock);}
 
 	//======================================================================================================================
 	// Locks::SpinLock: Class wrapping a simple spin lock with optional spin count

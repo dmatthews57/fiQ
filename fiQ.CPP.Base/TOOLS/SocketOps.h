@@ -122,7 +122,7 @@ public:
 	public:
 		//==================================================================================================================
 		// Public named constructor
-		_Check_return_ static ServerSocketPtr Create() {return std::make_unique<ServerSocket>(SocketOps::pass_key());}
+		_Check_return_ static ServerSocketPtr Create() {return std::make_unique<ServerSocket>(SocketOps::pass_key{});}
 		//==================================================================================================================
 		// External accessor functions
 		_Check_return_ const std::string& GetLastErrString() const noexcept {return LastErrString;}
@@ -705,7 +705,7 @@ _Check_return_ inline SocketOps::Result SocketOps::ServerSocket::WaitEvent(int T
 _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::ServerSocket::Accept(
 	_Inout_opt_ sockaddr_in* saddr, int TLSTimeout, size_t TLSBufferSize) {
 	// Create new SessionSocket object, passing along TLS values (if provided)
-	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key{}, UsingTLS, TLSBufferSize);
 	// Attempt to accept incoming connection, storing handle in object; perform TLS negotiation if required:
 	sp->SocketHandle = SocketOps::Accept(SocketHandle, saddr, &(sp->LastErrString));
 	if(sp->SocketValid() && UsingTLS) {
@@ -724,7 +724,7 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::Conn
 	bool UsingTLS, const std::string& TLSMethod, size_t TLSBufferSize) {
 	const SteadyClock EndTime(std::chrono::milliseconds{Timeout});
 	// Create new SessionSocket object, passing along TLS values (if provided)
-	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key{}, UsingTLS, TLSBufferSize);
 	// Attempt connection to remote, storing handle in object; perform TLS negotiation if required:
 	sp->SocketHandle = SocketOps::Connect(RemoteIP, RemotePort, Timeout, &(sp->LastErrString));
 	if(sp->SocketValid() && UsingTLS) {
@@ -736,7 +736,7 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::Conn
 _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::StartConnect(
 	_In_z_ const char* RemoteIP, unsigned short RemotePort,	bool UsingTLS, size_t TLSBufferSize) {
 	// Create new SessionSocket object, passing along TLS values (if provided)
-	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key(), UsingTLS, TLSBufferSize);
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key{}, UsingTLS, TLSBufferSize);
 	// Initiate connection request to remote, storing handle in object:
 	sp->SocketHandle = SocketOps::StartConnect(RemoteIP, RemotePort, &(sp->LastErrString));
 	return sp;

@@ -147,7 +147,7 @@ private:
 
 	//======================================================================================================================
 	// Private members
-	std::deque<std::shared_ptr<ConfigSection> > ConfigSections;	// Collection of ConfigSection objects
+	std::deque<SectionPtr> ConfigSections;	// Collection of ConfigSection objects
 };
 
 //==========================================================================================================================
@@ -218,7 +218,7 @@ _Check_return_ inline ConfigFile::ConfigSection::StrLenPair ConfigFile::ConfigSe
 	std::deque<ConfigEntry>::const_iterator cSeek = ConfigEntries.cbegin(), cEnd = ConfigEntries.cend();
 	for(cSeek; cSeek != cEnd; ++cSeek) {
 		// Retrieve value from this ConfigEntry; if result has valid pointer, return:
-		const StrLenPair retval = cSeek->GetValueIfName(pass_key(), name, namelen);
+		const StrLenPair retval = cSeek->GetValueIfName(pass_key{}, name, namelen);
 		if(retval.first != nullptr) return retval;
 	}
 	// If this point is reached, config parameter was not found; return null pair:
@@ -309,7 +309,7 @@ _Check_return_ inline bool ConfigFile::ConfigSection::GetNamedBool(const std::st
 template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline ConfigFile::SectionPtr ConfigFile::GetSection(_In_reads_z_(len - 1) T (&SectionName)[len]) const {
 	constexpr size_t namelen = len - 1;
-	std::deque<std::shared_ptr<ConfigSection> >::const_iterator cSeek = ConfigSections.cbegin(), cEnd = ConfigSections.cend();
+	auto cSeek = ConfigSections.cbegin(), cEnd = ConfigSections.cend();
 	for(cSeek; cSeek != cEnd; ++cSeek) {
 		if(cSeek->get()->GetSectionName().length() == namelen) {
 			if(_strnicmp(cSeek->get()->GetSectionName().data(), SectionName, namelen) == 0) return *cSeek;
@@ -319,7 +319,7 @@ _Check_return_ inline ConfigFile::SectionPtr ConfigFile::GetSection(_In_reads_z_
 }
 // ConfigFile::GetSection: Retrieve ConfigSection object with the specified name
 _Check_return_ inline ConfigFile::SectionPtr ConfigFile::GetSection(const std::string& SectionName) const {
-	std::deque<std::shared_ptr<ConfigSection> >::const_iterator cSeek = ConfigSections.cbegin(), cEnd = ConfigSections.cend();
+	auto cSeek = ConfigSections.cbegin(), cEnd = ConfigSections.cend();
 	for(cSeek; cSeek != cEnd; ++cSeek) {
 		if(_stricmp(cSeek->get()->GetSectionName().c_str(), SectionName.c_str()) == 0) return *cSeek;
 	}

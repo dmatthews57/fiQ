@@ -70,7 +70,7 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 	while(ThreadsShouldRun) {
 
 		// Look for expired timers ready to execute:
-		std::shared_ptr<TimerControlBlock> ToExec(nullptr);
+		std::shared_ptr<const TimerControlBlock> ToExec(nullptr);
 		bool NoTimersScheduled = false;
 		try {
 			auto lock = Locks::Acquire(OpenTimersLock);
@@ -83,7 +83,7 @@ unsigned int TimerHandle::TimerExecutor::TimerThreadExec() {
 
 							// Attempt to promote weak_ptr to shared_ptr; if successful, check whether
 							// timer has expired and if so move into outer scope pointer:
-							std::shared_ptr<TimerControlBlock> seekptr = seek->lock();
+							std::shared_ptr<const TimerControlBlock> seekptr = seek->lock();
 							if(seekptr ? (seekptr->ExecAt < now) : false) ToExec = std::move(seekptr);
 
 							// If seekptr is null, either the scheduler has abandoned this timer or we

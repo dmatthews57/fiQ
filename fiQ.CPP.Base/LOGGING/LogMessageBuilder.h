@@ -3,8 +3,8 @@
 // LogMessageBuilder.h : Definition of classes and utilities for generating LogMessage objects
 //==========================================================================================================================
 
-#include "LogMessageTemplate.h"
-#include "LogMessage.h"
+#include "Logging/LogMessageTemplate.h"
+#include "Logging/LogMessage.h"
 
 namespace FIQCPPBASE {
 
@@ -17,7 +17,7 @@ class LogMessageBuilder {
 public:
 
 	// Build: Apply parameters to template to construct a LogMessage object
-	std::unique_ptr<LogMessage> Build(LogMessage::ContextEntries&& context) const;
+	std::unique_ptr<const LogMessage> Build(LogMessage::ContextEntries&& context) const;
 
 	constexpr LogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt, T&& t) noexcept
 		: level(_level), lt(_lt), runtimeargs(t), escapeformats(_lt.EscapeFormats()) {
@@ -155,7 +155,7 @@ private:
 template<typename T> // Tuple of logging arguments (unused in this specialization)
 class LogMessageBuilder<0,T> {
 public:
-	constexpr std::unique_ptr<LogMessage> Build(LogMessage::ContextEntries&& context) const;
+	constexpr std::unique_ptr<const LogMessage> Build(LogMessage::ContextEntries&& context) const;
 	constexpr LogMessageBuilder(LogLevel _level, const LogMessageTemplate& _lt) : level(_level), lt(_lt){}
 private:
 	const LogLevel level;
@@ -166,7 +166,7 @@ private:
 //==========================================================================================================================
 // LogMessageBuilder<N>::Build: Construct LogMessage by applying runtime arguments to template:
 template<size_t N, typename T>
-inline std::unique_ptr<LogMessage> LogMessageBuilder<N,T>::Build(LogMessage::ContextEntries&& context) const {
+inline std::unique_ptr<const LogMessage> LogMessageBuilder<N,T>::Build(LogMessage::ContextEntries&& context) const {
 	// Create local string to hold data and pre-reserve expected length:
 	std::string message;
 	message.reserve(ElementSizes());
@@ -178,7 +178,7 @@ inline std::unique_ptr<LogMessage> LogMessageBuilder<N,T>::Build(LogMessage::Con
 }
 // LogMessageBuilder<0>::Build: Construct LogMessage by directly passing static template string:
 template<typename T>
-inline constexpr std::unique_ptr<LogMessage> LogMessageBuilder<0,T>::Build(LogMessage::ContextEntries&& context) const {
+inline constexpr std::unique_ptr<const LogMessage> LogMessageBuilder<0,T>::Build(LogMessage::ContextEntries&& context) const {
 	return LogMessage::Create(level, lt.Token(0), lt.TokenLength(0), std::move(context), lt.EscapeFormats());
 }
 

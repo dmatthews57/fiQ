@@ -82,7 +82,7 @@ public:
 		_In_opt_z_ const char* fname, // Function name (typically provided by macro above)
 		_In_opt_ const LogMessage::ContextEntries* localcontext = nullptr);
 	// Log: Relay LogMessage object to active sink(s)
-	static void Log(std::unique_ptr<LogMessage>&& lm);
+	static void Log(std::unique_ptr<const LogMessage>&& lm);
 
 	//======================================================================================================================
 	// Virtual defaulted constructor/destructor (public to allow access by unique_ptr)
@@ -100,10 +100,10 @@ protected:
 	// Pure virtual function definitions for Sink classes
 	virtual void Initialize() = 0;
 	virtual void Cleanup() = 0;
-	virtual void ReceiveLog(std::unique_ptr<LogMessage>&&) = 0;
+	virtual void ReceiveLog(std::unique_ptr<const LogMessage>&&) = 0;
 
 	// Protected utilities - Forward LogMessage to next sink in pipeline, if any
-	void ForwardLog(std::unique_ptr<LogMessage>&& lm) {
+	void ForwardLog(std::unique_ptr<const LogMessage>&& lm) {
 		if(NextSink.get()) NextSink->ReceiveLog(std::move(lm));
 	}
 
@@ -182,7 +182,7 @@ inline LogMessage::ContextEntries LogSink::PrepareContext(
 	// to LogMessage constructor, avoiding reallocation or copy operations):
 	return context;
 }
-inline void LogSink::Log(std::unique_ptr<LogMessage>&& lm) {GetSinkPtr()->ReceiveLog(std::move(lm));}
+inline void LogSink::Log(std::unique_ptr<const LogMessage>&& lm) {GetSinkPtr()->ReceiveLog(std::move(lm));}
 #pragma endregion Static logging functions
 
 }; // (end namespace FIQCPPBASE)

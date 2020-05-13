@@ -71,7 +71,7 @@ _Check_return_ bool ConfigFile::ConfigSection::ReadSection(
 			// Ensure ptr has not exceeded bound (shouldn't be possible, since null terminator should stop loop):
 			if(ptr >= EndReadBuf) throw FORMAT_RUNTIME_ERROR("Unterminated line read from file (2)");
 			// If non-zero-length data found, add this line to deque (advancing EndPtr ahead of end of data):
-			else if(EndPtr > StartPtr) ConfigEntries.emplace_back(pass_key(), StartPtr, ++EndPtr, Equals);
+			else if(EndPtr > StartPtr) ConfigEntries.emplace_back(pass_key{}, StartPtr, ++EndPtr, Equals);
 		}
 		// If this point is reached, file was successfully read; return success if any entries added to collection:
 		return (ConfigEntries.empty() == false);
@@ -149,8 +149,8 @@ _Check_return_ bool ConfigFile::Initialize(_In_z_ const char* FileName) {
 				// Create new ConfigSection object, and hand off file reading to it (it will return when encountering end
 				// of file or start of next section); if read successful, add object to member deque:
 				std::shared_ptr<ConfigSection> cs = std::make_shared<ConfigSection>(
-					pass_key(), StringOps::Trim(StartPtr, EndPtr - StartPtr));
-				if(cs->ReadSection<ReadBufSize>(pass_key(), fp.get(), ReadBuf)) ConfigSections.push_back(std::move(cs));
+					pass_key{}, StringOps::Trim(StartPtr, EndPtr - StartPtr));
+				if(cs->ReadSection<ReadBufSize>(pass_key{}, fp.get(), ReadBuf)) ConfigSections.push_back(std::move(cs));
 			}
 		}
 		// If this point is reached, file was successfully read; return success if any sections added to collection:

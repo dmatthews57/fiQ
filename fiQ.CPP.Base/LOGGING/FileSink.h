@@ -86,7 +86,7 @@ private:
 					",\"msg\":\"",
 					lm.GetLevel(),
 					lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday,
-						lt.tm_hour, lt.tm_min, lt.tm_sec, lm.GetTimestamp().GetMilliseconds()
+					lt.tm_hour, lt.tm_min, lt.tm_sec, lm.GetTimestamp().GetMilliseconds() % 1000
 				);
 				// Write in contents of full formatted message:
 				if(lm.EscapeFormats() & FormatEscape::JSON) {
@@ -175,7 +175,7 @@ private:
 	void Cleanup() override {
 		if(ThreadWaitStop(3000) == false) LogSink::StdErrLog("WARNING: FinkSink logger thread not stopped cleanly");
 	}
-	void ReceiveLog(std::unique_ptr<LogMessage>&& lm) override {
+	void ReceiveLog(std::unique_ptr<const LogMessage>&& lm) override {
 		// Queue LogMessage for processing by thread; check worker queue size, and log error if needed:
 		const size_t qsize = ThreadQueueWork(std::move(lm));
 		if(qsize >= 100 && (qsize % 20) == 0) LogSink::StdErrLog("WARNING: %zu objects in FileSink logger queue", qsize);

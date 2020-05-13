@@ -16,8 +16,7 @@ void Outermost() {
 	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("OUTERMOSTMSG"));}
 }
 
-#include "Logging/ConsoleSink.h"
-#include "Logging/FileSink.h"
+#include "Messages/HSMRequest.h"
 
 int main()
 {
@@ -29,25 +28,37 @@ int main()
 	SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 
 	try {
-		LogSink::EnableEnrichers(LogEnrichers::ThreadID);
-		LogSink::AddSink<FileSink>(LogLevel::Debug, FileSink::Config { FileSink::Format::JSON, FileSink::Rollover::Hourly, "\\TEMP\\LOGS" });
-		LogSink::AddSink<ConsoleSink>(LogLevel::Debug, ConsoleSink::Config { });
-		LogSink::InitializeSinks();
+		const char temp[] = "ABCD";
+		std::shared_ptr<RoutableMessage> rm = HSMRequest::Create(
+			HSMRequest::Operation::GenerateKey,
+			HSMRequest::FieldSet {
+				{HSMRequest::FieldName::KEK, temp, strlen(temp)},
+				{HSMRequest::FieldName::KEK, HSMLITERAL("HELLO")}
+			}
+		);
+		printf("%d %d\n", rm->GetType(), rm->GetSubtype());
+		HSMRequest* h = rm->GetAs<HSMRequest>();
+		if(h) {
+			printf("CHR %zu\n", h->GetRequestFields().size());
 
-		const LogMessage::ContextEntries ce = {{"SAMPLE1","Whatever1"},{"SAMPLE2",std::string("wHATEVER2")}};
-		std::string temp = "nonliteral";
-		LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Debug, &ce,
-			"{first:F9} SECOND {second:X9} THIRD {:D} {fourth:S3} FIFTH {fifth:S10} SIXTH {sixth:F22}",
-			7654321.23456789123, 0xFEDCBA0987, 321UL, "literal", temp);
-		LOG_FROM_TEMPLATE(LogLevel::Info, "Message with no\x1c placeholders");
-		LOG_FROM_TEMPLATE(LogLevel::Warn, "Message with some \nplaceholders [${amount:F2}][{account}]", 21.50, 30);
-		LOG_FROM_TEMPLATE(LogLevel::Error, "Error with no placeholders");
-		LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Fatal, &ce, "Goodbye, fatal error");
+			{auto f = HSMRequest::GetField(HSMRequest::FieldName::KEK, h->GetRequestFields());
+			printf("KEK: %d %zu %.*s\n", HSMRequest::GetFieldName(f), HSMRequest::GetFieldLength(f), (int)HSMRequest::GetFieldLength(f), HSMRequest::GetFieldValue(f));}
+			{auto f = HSMRequest::GetField(HSMRequest::FieldName::KCVIn, h->GetRequestFields());
+			printf("KCVIn: %d %zu %.*s\n", HSMRequest::GetFieldName(f), HSMRequest::GetFieldLength(f), (int)HSMRequest::GetFieldLength(f), HSMRequest::GetFieldValue(f));}
 
-		//Outermost();
-		Sleep(100);
-		LogSink::CleanupSinks();
+			for(auto seek = h->GetRequestFields().cbegin(); seek != h->GetRequestFields().cend(); ++seek) {
+				printf("REQLOOP: %d %zu %.*s\n", HSMRequest::GetFieldName(*seek), HSMRequest::GetFieldLength(*seek), (int)HSMRequest::GetFieldLength(*seek), HSMRequest::GetFieldValue(*seek));
+			}
 
+			h->SetResponseFields(HSMRequest::FieldCopySet {
+				{HSMRequest::FieldName::KeyOutKEK, "KEYOUTKEK"},
+				{HSMRequest::FieldName::KeyOutMFK, "KEYOUTMFK"}
+			});
+
+			for(auto seek = h->GetResponseFields().cbegin(); seek != h->GetResponseFields().cend(); ++seek) {
+				printf("RESPLOOP: %d %zu %.*s\n", HSMRequest::GetFieldName(*seek), HSMRequest::GetFieldLength(*seek), (int)HSMRequest::GetFieldLength(*seek), HSMRequest::GetFieldValue(*seek));
+			}
+		}
 		return 0;
 	}
 	catch(const std::runtime_error& e) {
@@ -64,4 +75,3 @@ int main()
 		LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Error, &exceptioncontext, "Caught exception");
 	}
 }
-
