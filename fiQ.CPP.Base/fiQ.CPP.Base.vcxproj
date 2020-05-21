@@ -151,6 +151,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="HSM\FuturexHSMNode.h" />
+    <ClInclude Include="HSM\HSMNode.h" />
     <ClInclude Include="LOGGING\ConsoleSink.h" />
     <ClInclude Include="LOGGING\FileSink.h" />
     <ClInclude Include="LOGGING\LogMessage.h" />
@@ -158,6 +160,7 @@
     <ClInclude Include="LOGGING\LogMessageTemplate.h" />
     <ClInclude Include="LOGGING\LogSink.h" />
     <ClInclude Include="MESSAGES\HSMRequest.h" />
+    <ClInclude Include="MESSAGES\MessageNode.h" />
     <ClInclude Include="MESSAGES\RoutableMessage.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="TOOLS\ConfigFile.h" />
@@ -175,6 +178,8 @@
     <ClInclude Include="Tools\ValueOps.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="HSM\FuturexHSMNode.cpp" />
+    <ClCompile Include="HSM\HSMNode.cpp" />
     <ClCompile Include="LOGGING\LogSink.cpp" />
     <ClCompile Include="MESSAGES\HSMRequest.cpp" />
     <ClCompile Include="pch.cpp">

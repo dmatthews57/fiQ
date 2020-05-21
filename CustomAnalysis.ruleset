@@ -2,6 +2,8 @@
 <RuleSet Name="fiQ.CPP" Description="Microsoft All Rules with specific tests disabled." ToolsVersion="16.0">
   <IncludeAll Action="Warning" />
   <Rules AnalyzerId="Microsoft.Analyzers.NativeCodeAnalysis" RuleNamespace="Microsoft.Rules.Native">
+    <Rule Id="C26415" Action="None" />
+    <Rule Id="C26418" Action="None" />
     <Rule Id="C26429" Action="None" />
     <Rule Id="C26446" Action="None" />
     <Rule Id="C26481" Action="None" />

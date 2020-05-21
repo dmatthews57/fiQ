@@ -17,6 +17,7 @@ void Outermost() {
 }
 
 #include "Messages/HSMRequest.h"
+#include "HSM/FuturexHSMNode.h"
 
 int main()
 {
@@ -28,37 +29,28 @@ int main()
 	SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 
 	try {
+		std::shared_ptr<MessageNode> hsm = HSMNode::Create(HSMNode::HSMType::Futurex);
+
 		const char temp[] = "ABCD";
-		std::shared_ptr<RoutableMessage> rm = HSMRequest::Create(
+		std::shared_ptr<HSMRequest> h = HSMRequest::Create(
 			HSMRequest::Operation::GenerateKey,
-			HSMRequest::FieldSet {
+			HSMRequest::RequestFieldSet {
 				{HSMRequest::FieldName::KEK, temp, strlen(temp)},
 				{HSMRequest::FieldName::KEK, HSMLITERAL("HELLO")}
 			}
 		);
-		printf("%d %d\n", rm->GetType(), rm->GetSubtype());
-		HSMRequest* h = rm->GetAs<HSMRequest>();
-		if(h) {
-			printf("CHR %zu\n", h->GetRequestFields().size());
 
-			{auto f = HSMRequest::GetField(HSMRequest::FieldName::KEK, h->GetRequestFields());
-			printf("KEK: %d %zu %.*s\n", HSMRequest::GetFieldName(f), HSMRequest::GetFieldLength(f), (int)HSMRequest::GetFieldLength(f), HSMRequest::GetFieldValue(f));}
-			{auto f = HSMRequest::GetField(HSMRequest::FieldName::KCVIn, h->GetRequestFields());
-			printf("KCVIn: %d %zu %.*s\n", HSMRequest::GetFieldName(f), HSMRequest::GetFieldLength(f), (int)HSMRequest::GetFieldLength(f), HSMRequest::GetFieldValue(f));}
+		if(hsm->ProcessRequest(h)) {
+			printf("\nHSM RESPONSE (%d):\n", h->GetResult());
+			{auto f = h->GetResponseField(HSMRequest::FieldName::KeyOutKEK);
+			printf("KEYOUTKEK: %zu [%s]\n", f.length(), f.c_str());}
+			{auto f = h->GetResponseField(HSMRequest::FieldName::KeyOutMFK);
+			printf("KEYOUTMFK: %zu [%s]\n", f.length(), f.c_str());}
+			{auto f = h->GetResponseField(HSMRequest::FieldName::KCVOut);
+			printf("KCFOut: %zu [%s]\n", f.length(), f.c_str());}
 
-			for(auto seek = h->GetRequestFields().cbegin(); seek != h->GetRequestFields().cend(); ++seek) {
-				printf("REQLOOP: %d %zu %.*s\n", HSMRequest::GetFieldName(*seek), HSMRequest::GetFieldLength(*seek), (int)HSMRequest::GetFieldLength(*seek), HSMRequest::GetFieldValue(*seek));
-			}
-
-			h->SetResponseFields(HSMRequest::FieldCopySet {
-				{HSMRequest::FieldName::KeyOutKEK, "KEYOUTKEK"},
-				{HSMRequest::FieldName::KeyOutMFK, "KEYOUTMFK"}
-			});
-
-			for(auto seek = h->GetResponseFields().cbegin(); seek != h->GetResponseFields().cend(); ++seek) {
-				printf("RESPLOOP: %d %zu %.*s\n", HSMRequest::GetFieldName(*seek), HSMRequest::GetFieldLength(*seek), (int)HSMRequest::GetFieldLength(*seek), HSMRequest::GetFieldValue(*seek));
-			}
 		}
+		else printf("Message processing failed\n");
 		return 0;
 	}
 	catch(const std::runtime_error& e) {

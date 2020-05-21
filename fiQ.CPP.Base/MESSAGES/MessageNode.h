@@ -1,43 +1,41 @@
 #pragma once
 //==========================================================================================================================
-// RoutableMessage.h : Base class for messaging object which can be routed through system
+// MessageNode.h : Base class for an object capable of generating or receiving and processing RoutableMessage objects
 //==========================================================================================================================
 
 namespace FIQCPPBASE {
 
-class RoutableMessage {
+class RoutableMessage;
+
+class MessageNode {
 public:
 
 	//======================================================================================================================
 	// Type definitions
-	enum class Type : int { Invalid = 0, Transaction = 1, BMPMessage = 2, HSMRequest = 3, DBRequest = 4 };
+	enum class Type : int { HSM = 1 };
 	using Subtype = int; // Provide alias for child classes to define their own subtypes
 
 	//======================================================================================================================
-	// Public accessors
-	_Check_return_ Type GetType() const noexcept {return type;}
-	_Check_return_ Subtype GetSubtype() const noexcept {return subtype;}
-	template<typename T, std::enable_if_t<std::is_base_of_v<RoutableMessage,T>, int> = 0>
-	_Check_return_ const T* GetAs() const noexcept(false) {return dynamic_cast<const T*>(this);}
-	template<typename T, std::enable_if_t<std::is_base_of_v<RoutableMessage,T>, int> = 0>
-	_Check_return_ T* GetAs() noexcept(false) {return dynamic_cast<T*>(this);}
+	// Pure virtual function definitions for child classes:
+	_Check_return_ virtual bool ProcessRequest(const std::shared_ptr<RoutableMessage>& rm) noexcept(false) = 0;
+	_Check_return_ virtual bool ProcessResponse(const std::shared_ptr<RoutableMessage>& rm) noexcept(false) = 0;
 
 	//======================================================================================================================
-	// Defaulted public virtual destructor
-	virtual ~RoutableMessage() noexcept = default;
+	// Virtual default destructor (public to allow destruction via base class pointer)
+	virtual ~MessageNode() = default;
 
+	//======================================================================================================================
 	// Deleted copy/move constructors and assignment operators
-	RoutableMessage(const RoutableMessage&) = delete;
-	RoutableMessage(RoutableMessage&&) = delete;
-	RoutableMessage& operator=(const RoutableMessage&) = delete;
-	RoutableMessage& operator=(RoutableMessage&&) = delete;
-
+	MessageNode(const MessageNode&) = delete;
+	MessageNode(MessageNode&&) = delete;
+	MessageNode& operator=(const MessageNode&) = delete;
+	MessageNode& operator=(MessageNode&&) = delete;
 
 protected:
 
 	//======================================================================================================================
-	// Protected constructor (RoutableMessage objects can be created via child classes only)
-	RoutableMessage(Type _type, Subtype _subtype) noexcept : type(_type), subtype(_subtype) {}
+	// Protected default constructor (MessageNodes can be created via child class only)
+	MessageNode(Type _type, Subtype _subtype) noexcept : type(_type), subtype(_subtype) {}
 
 private:
 

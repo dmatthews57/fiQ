@@ -84,9 +84,7 @@ public:
 	// Log: Relay LogMessage object to active sink(s)
 	static void Log(std::unique_ptr<const LogMessage>&& lm);
 
-	//======================================================================================================================
-	// Virtual defaulted constructor/destructor (public to allow access by unique_ptr)
-	LogSink() noexcept = default;
+	// Virtual default destructor (public to allow access by unique_ptr)
 	virtual ~LogSink() noexcept(false) {} // Cannot be defaulted
 	// Deleted copy/move constructors and assignment operators
 	LogSink(const LogSink&) = delete;
@@ -96,7 +94,9 @@ public:
 
 protected:
 
-	//======================================================================================================================
+	// Protected default constructor (only child classes can access)
+	LogSink() noexcept = default;
+
 	// Pure virtual function definitions for Sink classes
 	virtual void Initialize() = 0;
 	virtual void Cleanup() = 0;
