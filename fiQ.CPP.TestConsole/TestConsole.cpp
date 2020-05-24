@@ -31,32 +31,66 @@ int main()
 	try {
 		std::shared_ptr<MessageNode> hsm = HSMNode::Create(HSMNode::HSMType::Futurex);
 
-		const char temp[] = "ABCD";
-		std::shared_ptr<HSMRequest> h = HSMRequest::Create(
+		{std::shared_ptr<HSMRequest> h = HSMRequest::Create(
 			HSMRequest::Operation::GenerateKey,
 			HSMRequest::RequestFieldSet {
-				{HSMRequest::FieldName::KEK, temp, strlen(temp)},
-				{HSMRequest::FieldName::KEK, HSMLITERAL("HELLO")}
+				{HSMRequest::FieldName::MFKMod, HSMLITERAL("D")},
+				{HSMRequest::FieldName::KEK, HSMLITERAL("11223344556677889900AABBCCDDEEFF")},
+				{HSMRequest::FieldName::KEKMod, HSMLITERAL("0")}
 			}
 		);
-
-		if(hsm->ProcessRequest(h)) {
+		if(hsm->ProcessRequest(h) == MessageNode::RouteResult::Processed) {
 			printf("\nHSM RESPONSE (%d):\n", h->GetResult());
 			{auto f = h->GetResponseField(HSMRequest::FieldName::KeyOutKEK);
-			printf("KEYOUTKEK: %zu [%s]\n", f.length(), f.c_str());}
+			printf("KEYOUTKEK: [%s]\n", f.c_str());}
 			{auto f = h->GetResponseField(HSMRequest::FieldName::KeyOutMFK);
-			printf("KEYOUTMFK: %zu [%s]\n", f.length(), f.c_str());}
+			printf("KEYOUTMFK: [%s]\n", f.c_str());}
 			{auto f = h->GetResponseField(HSMRequest::FieldName::KCVOut);
-			printf("KCFOut: %zu [%s]\n", f.length(), f.c_str());}
+			printf("KCFOut: [%s]\n", f.c_str());}
 
 		}
-		else printf("Message processing failed\n");
+		else printf("Generate key processing failed\n");}
+
+		{std::shared_ptr<HSMRequest> h = HSMRequest::Create(
+			HSMRequest::Operation::TranslateKey,
+			HSMRequest::RequestFieldSet {
+				{HSMRequest::FieldName::MFKMod, HSMLITERAL("D")},
+				{HSMRequest::FieldName::KeyIn, HSMLITERAL("88888888888888888888888888888888")},
+				{HSMRequest::FieldName::KEK, HSMLITERAL("11223344556677889900AABBCCDDEEFF")},
+				{HSMRequest::FieldName::KEKMod, HSMLITERAL("D")}
+			}
+		);
+		if(hsm->ProcessRequest(h) == MessageNode::RouteResult::Processed) {
+			printf("\nHSM RESPONSE (%d):\n", h->GetResult());
+			{auto f = h->GetResponseField(HSMRequest::FieldName::KeyOutMFK);
+			printf("KEYOUTMFK: [%s]\n", f.c_str());}
+			{auto f = h->GetResponseField(HSMRequest::FieldName::KCVOut);
+			printf("KCFOut: [%s]\n", f.c_str());}
+
+		}
+		else printf("Translate key processing failed\n");}
+
+		{std::shared_ptr<HSMRequest> h = HSMRequest::Create(
+			HSMRequest::Operation::TranslatePIN,
+			HSMRequest::RequestFieldSet {
+				{HSMRequest::FieldName::PEKSrc, HSMLITERAL("88888888888888888888888888888888")},
+				{HSMRequest::FieldName::PEKDst, HSMLITERAL("88888888888888888888888888888888")},
+				{HSMRequest::FieldName::PINIn, HSMLITERAL("0123456789ABCDEF")},
+				{HSMRequest::FieldName::PAN, HSMLITERAL("4219730010000001")}
+			}
+		);
+		if(hsm->ProcessRequest(h) == MessageNode::RouteResult::Processed) {
+			printf("\nHSM RESPONSE (%d):\n", h->GetResult());
+			{auto f = h->GetResponseField(HSMRequest::FieldName::PINOut);
+			printf("PINOut: [%s]\n", f.c_str());}
+		}
+		else printf("Translate PIN processing failed\n");}
 		return 0;
 	}
 	catch(const std::runtime_error& e) {
 		const auto exceptioncontext = Exceptions::UnrollException(e);
 		LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Error, &exceptioncontext, "Caught runtime error");
-		printf("%s\n", Exceptions::UnrollExceptionString(e).c_str());
+		//printf("%s\n", Exceptions::UnrollExceptionString(e).c_str());
 	}
 	catch(const std::invalid_argument& e) {
 		const auto exceptioncontext = Exceptions::UnrollException(e);

@@ -14,11 +14,16 @@ public:
 	// Type definitions
 	enum class Type : int { HSM = 1 };
 	using Subtype = int; // Provide alias for child classes to define their own subtypes
+	enum class RouteResult : int {
+		Pending = 0,		// Request has been routed, processing now pending
+		Unprocessed = 1,	// Request was not processed, and can be rerouted
+		Processed = 2		// Request was processed
+	};
 
 	//======================================================================================================================
 	// Pure virtual function definitions for child classes:
-	_Check_return_ virtual bool ProcessRequest(const std::shared_ptr<RoutableMessage>& rm) noexcept(false) = 0;
-	_Check_return_ virtual bool ProcessResponse(const std::shared_ptr<RoutableMessage>& rm) noexcept(false) = 0;
+	_Check_return_ virtual RouteResult ProcessRequest(const std::shared_ptr<RoutableMessage>& rm) noexcept(false) = 0;
+	_Check_return_ virtual RouteResult ProcessResponse(const std::shared_ptr<RoutableMessage>& rm) noexcept(false) = 0;
 
 	//======================================================================================================================
 	// Virtual default destructor (public to allow destruction via base class pointer)

@@ -63,16 +63,21 @@ public:
 		_Check_return_ bool IsLocked() const noexcept;
 		_Check_return_ int MSecLocked() const noexcept;
 
-		// Public constructor: ContinueFlag is an optional reference to a flag that tells this lock whether the owning object
-		// is still intending to run; if it ever becomes false, lock acquisition will be aborted immediately (if this is not
-		// required, just provide true to this function and lock acquisition will work blindly so long as this lock is valid)
-		SpinLock(const bool& _ContinueFlag, bool ConstructValid = false, unsigned short _SpinCount = 0) noexcept
+		// Public "sensitive" constructor: ContinueFlag is a reference to a flag that will tell this lock whether the owning
+		// object is still intending to run; if it ever becomes false, lock acquisition will be aborted immediately (if this
+		// is not required, use other constructor)
+		SpinLock(bool& _ContinueFlag, bool ConstructValid, unsigned short _SpinCount = 0) noexcept
 			: ContinueFlag(_ContinueFlag), SpinCount(_SpinCount), LockVal(ConstructValid ? 0 : 2), LastLocked() {}
+		// Public "default" constructor: ContinueFlag is not used, lock acquisition will work blindly so long as this object
+		// is valid (i.e. has been initialized or was constructed valid):
+		SpinLock(bool ConstructValid, unsigned short _SpinCount = 0) noexcept
+			: ContinueFlag(alwaystrue), SpinCount(_SpinCount), LockVal(ConstructValid ? 0 : 2), LastLocked() {}
 	private:
 		const bool& ContinueFlag;
 		const unsigned short SpinCount;
 		long LockVal;
 		SteadyClock LastLocked;
+		static const bool alwaystrue = true;
 	};
 
 }; // (end class Locks)

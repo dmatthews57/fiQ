@@ -69,13 +69,13 @@ public:
 	Tokenizer& AssignInline(_Inout_updates_opt_z_(len + 1) char* buf, size_t len, Args&&...delimiter);
 
 	//======================================================================================================================
-	// Move constructor: Required due to named constructor, but should never be called (RVO should optimize out)
-	Tokenizer(Tokenizer&&) noexcept(false) {throw std::runtime_error("Tokenizer move construction is not valid");}
 	// Defaulted destructor (no special logic required)
 	~Tokenizer() = default;
-	// Deleted constructors, assignment operators
+	// Move and copy constructors
+	Tokenizer(Tokenizer&&);
+	Tokenizer(const Tokenizer&);
+	// Deleted default constructor, assignment operators
 	Tokenizer() = delete;
-	Tokenizer(const Tokenizer&) = delete;
 	Tokenizer& operator=(const Tokenizer&) = delete;
 	Tokenizer& operator=(Tokenizer&&) = delete;
 
@@ -139,6 +139,24 @@ private:
 };
 
 //==========================================================================================================================
+// Public move constructor: No special logic required as object will take over memory owned by original
+inline Tokenizer::Tokenizer(Tokenizer&& t) : toks(std::move(t.toks)), StringCopy(std::move(t.StringCopy)) {
+	printf("Tokenizer move ctor called\n");
+}
+// Public copy constructor: Requires logic to reposition pointers to this object, if necessary
+inline Tokenizer::Tokenizer(const Tokenizer& t) : toks(t.toks), StringCopy(t.StringCopy) {
+	printf("Tokenizer copy ctor called\n");
+	if(StringCopy.empty() == false) {
+		// Copied object owns its own memory, which means pointers in toks vector point currently point to copied object;
+		// we need to re-point them to this object:
+		const char * const copystart = t.StringCopy.data(), * const copyend = t.StringCopy.data() + t.StringCopy.size();
+		for(size_t i = 0; i < toks.size(); ++i) {
+			if(ValueOps::IsImpl<const char*>(t.toks[i].first).InRangeLeft(copystart, copyend))
+				toks[i].first = StringCopy.data() + (t.toks[i].first - t.StringCopy.data());
+			else throw std::runtime_error("Tokenizer copy contains invalid pointers");
+		}
+	}
+}
 // Private constructor: Create copy of read-only source string and tokenize
 template<typename...Args>
 inline constexpr Tokenizer::Tokenizer(
@@ -158,7 +176,6 @@ inline constexpr Tokenizer::Tokenizer(
 		ParseString(buf, len, MaxToks, GetComp(std::forward<Args>(delimiter)...));
 	}
 }
-
 //==========================================================================================================================
 // AssignCopy: Reset object, create copy of read-only source string and tokenize
 template<size_t MaxToks, typename...Args>

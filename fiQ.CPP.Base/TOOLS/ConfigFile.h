@@ -18,7 +18,7 @@ public:
 	private: struct pass_key {}; // Private function pass-key definition
 	public:
 		// Type definitions
-		using StrLenPair = std::pair<const char*,size_t>;
+		using StringView = std::pair<const char*,size_t>;
 
 		//==================================================================================================================
 		// External accessors and utilities
@@ -100,7 +100,7 @@ public:
 				return Tokenizer::CreateCopy<MaxToks>(Entry, std::forward<Args>(delimiter)...);
 			}
 			// Locked public functions (can only be executed from ConfigSection due to pass_key)
-			_Check_return_ ConfigSection::StrLenPair GetValueIfName(
+			_Check_return_ ConfigSection::StringView GetValueIfName(
 				ConfigSection::pass_key, _In_reads_(namelen) const char* name, size_t namelen) const;
 			ConfigEntry(ConfigSection::pass_key, _In_ const char *start, _In_ const char *end, _In_opt_ const char *equal);
 			// Deleted copy/move constructors and assignment operators (note these functions are not problematic as this
@@ -120,7 +120,7 @@ public:
 
 		//==================================================================================================================
 		// GetNamedConfig: Private utility function to locate ConfigEntry by name and return its data value
-		_Check_return_ StrLenPair GetNamedConfig(_In_reads_(namelen) const char *name, size_t namelen) const;
+		_Check_return_ StringView GetNamedConfig(_In_reads_(namelen) const char *name, size_t namelen) const;
 
 		//==================================================================================================================
 		// Private members
@@ -171,8 +171,8 @@ inline ConfigFile::ConfigSection::ConfigEntry::ConfigEntry(
 	}
 }
 // ConfigEntry::GetValueIfName: If this parameter is a "Name=Value" pair with matching "Name", retrieve "Value" portion of data
-// - Returns a StrLenPair with location and length of value data; if Name does not match, pair will have null pointer/zero length
-_Check_return_ inline ConfigFile::ConfigSection::StrLenPair ConfigFile::ConfigSection::ConfigEntry::GetValueIfName(
+// - Returns a StringView with location and length of value data; if Name does not match, pair will have null pointer/zero length
+_Check_return_ inline ConfigFile::ConfigSection::StringView ConfigFile::ConfigSection::ConfigEntry::GetValueIfName(
 	ConfigSection::pass_key, _In_reads_(namelen) const char* name, size_t namelen) const {
 	// Only consider possible matches if local and input names are valid and same length, SeparatorIndex is set (cheapest checks):
 	if((namelen > 0 && SeparatorIndex != std::string::npos) ? (namelen == EntryName.length()) : false) {
@@ -212,13 +212,13 @@ _Check_return_ inline ConfigFile::ConfigSection::StrLenPair ConfigFile::ConfigSe
 
 //==========================================================================================================================
 // ConfigSection::GetNamedConfig: Private utility function to locate ConfigEntry by name and return its data value
-// - Returns a StrLenPair with location and length of Value data; if Name not found, pair will have null pointer
-_Check_return_ inline ConfigFile::ConfigSection::StrLenPair ConfigFile::ConfigSection::GetNamedConfig(
+// - Returns a StringView with location and length of Value data; if Name not found, pair will have null pointer
+_Check_return_ inline ConfigFile::ConfigSection::StringView ConfigFile::ConfigSection::GetNamedConfig(
 	_In_reads_(namelen) const char *name, size_t namelen) const {
 	std::deque<ConfigEntry>::const_iterator cSeek = ConfigEntries.cbegin(), cEnd = ConfigEntries.cend();
 	for(cSeek; cSeek != cEnd; ++cSeek) {
 		// Retrieve value from this ConfigEntry; if result has valid pointer, return:
-		const StrLenPair retval = cSeek->GetValueIfName(pass_key{}, name, namelen);
+		const StringView retval = cSeek->GetValueIfName(pass_key{}, name, namelen);
 		if(retval.first != nullptr) return retval;
 	}
 	// If this point is reached, config parameter was not found; return null pair:
@@ -227,43 +227,43 @@ _Check_return_ inline ConfigFile::ConfigSection::StrLenPair ConfigFile::ConfigSe
 // ConfigSection::GetNamedString: Retrieve string parameter with the specified name (string literal version)
 template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline std::string ConfigFile::ConfigSection::GetNamedString(_In_reads_z_(len - 1) T (&name)[len]) const {
-	const StrLenPair retval = GetNamedConfig(name, len - 1);
+	const StringView retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0) ? std::string(retval.first, retval.second) : EmptyStr();
 }
 // ConfigSection::GetNamedString: Retrieve string parameter with the specified name (string version)
 _Check_return_ inline std::string ConfigFile::ConfigSection::GetNamedString(const std::string& name) const {
-	const StrLenPair retval = GetNamedConfig(name.data(), name.length());
+	const StringView retval = GetNamedConfig(name.data(), name.length());
 	return (retval.first != nullptr && retval.second > 0) ? std::string(retval.first, retval.second) : EmptyStr();
 }
 // ConfigSection::GetNamedTokenizer: Retrieve tokenized string parameter with the specified name (string literal version)
 template<size_t MaxToks, typename T, size_t len, typename...Args, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline Tokenizer ConfigFile::ConfigSection::GetNamedTokenizer(
 	_In_reads_z_(len - 1) T (&name)[len], Args&&...delimiter) const {
-	const StrLenPair retval = GetNamedConfig(name, len - 1);
+	const StringView retval = GetNamedConfig(name, len - 1);
 	return Tokenizer::CreateCopy<MaxToks>(retval.first, retval.second, std::forward<Args>(delimiter)...);
 }
 // ConfigSection::GetNamedTokenizer: Retrieve tokenized string parameter with the specified name (string version)
 template<size_t MaxToks, typename...Args>
 _Check_return_ inline Tokenizer ConfigFile::ConfigSection::GetNamedTokenizer(
 	const std::string& name, Args&&...delimiter) const {
-	const StrLenPair retval = GetNamedConfig(name.data(), name.length());
+	const StringView retval = GetNamedConfig(name.data(), name.length());
 	return Tokenizer::CreateCopy<MaxToks>(retval.first, retval.second, std::forward<Args>(delimiter)...);
 }
 // ConfigSection::GetNamedInt: Retrieve integer parameter with the specified name (string literal version)
 template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline int ConfigFile::ConfigSection::GetNamedInt(_In_reads_z_(len - 1) T (&name)[len]) const {
-	const StrLenPair retval = GetNamedConfig(name, len - 1);
+	const StringView retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Decimal::FlexReadString(retval.first, retval.second) : 0;
 }
 // ConfigSection::GetNamedInt: Retrieve integer parameter with the specified name (string version)
 _Check_return_ inline int ConfigFile::ConfigSection::GetNamedInt(const std::string& name) const {
-	const StrLenPair retval = GetNamedConfig(name.data(), name.length());
+	const StringView retval = GetNamedConfig(name.data(), name.length());
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Decimal::FlexReadString(retval.first, retval.second) : 0;
 }
 // ConfigSection::GetNamedUShort: Retrieve unsigned short parameter with the specified name (string literal version)
 template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline unsigned short ConfigFile::ConfigSection::GetNamedUShort(_In_reads_z_(len - 1) T (&name)[len]) const {
-	const StrLenPair retval = GetNamedConfig(name, len - 1);
+	const StringView retval = GetNamedConfig(name, len - 1);
 	if(retval.first != nullptr && retval.second > 0) {
 		const int i = StringOps::Decimal::FlexReadString(retval.first, retval.second);
 		return ValueOps::Is(i).InRange(0, 0xFFFF) ? gsl::narrow_cast<unsigned short>(i) : 0;
@@ -272,7 +272,7 @@ _Check_return_ inline unsigned short ConfigFile::ConfigSection::GetNamedUShort(_
 }
 // ConfigSection::GetNamedUShort: Retrieve unsigned short parameter with the specified name (string version)
 _Check_return_ inline unsigned short ConfigFile::ConfigSection::GetNamedUShort(const std::string& name) const {
-	const StrLenPair retval = GetNamedConfig(name.data(), name.length());
+	const StringView retval = GetNamedConfig(name.data(), name.length());
 	if(retval.first != nullptr && retval.second > 0) {
 		const int i = StringOps::Decimal::FlexReadString(retval.first, retval.second);
 		return ValueOps::Is(i).InRange(0, 0xFFFF) ? gsl::narrow_cast<unsigned short>(i) : 0;
@@ -282,25 +282,25 @@ _Check_return_ inline unsigned short ConfigFile::ConfigSection::GetNamedUShort(c
 // ConfigSection::GetNamedHex: Retrieve unsigned integer from hex string parameter with the specified name (string literal version)
 template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline unsigned long long ConfigFile::ConfigSection::GetNamedHex(_In_reads_z_(len - 1) T (&name)[len]) const {
-	const StrLenPair retval = GetNamedConfig(name, len - 1);
+	const StringView retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Ascii::FlexReadString(retval.first, retval.second) : 0;
 }
 // ConfigSection::GetNamedHex: Retrieve unsigned integer from hex string parameter with the specified name (string version)
 _Check_return_ inline unsigned long long ConfigFile::ConfigSection::GetNamedHex(const std::string& name) const {
-	const StrLenPair retval = GetNamedConfig(name.data(), name.length());
+	const StringView retval = GetNamedConfig(name.data(), name.length());
 	return (retval.first != nullptr && retval.second > 0) ? StringOps::Ascii::FlexReadString(retval.first, retval.second) : 0;
 }
 // ConfigSection::GetNamedBool: Retrieve boolean parameter with the specified name (string literal version)
 // - Bases decision on first character only, as determined by BoolParm utility function
 template<typename T, size_t len, std::enable_if_t<std::is_same_v<T, const char>, int>>
 _Check_return_ inline bool ConfigFile::ConfigSection::GetNamedBool(_In_reads_z_(len - 1) T (&name)[len]) const {
-	const StrLenPair retval = GetNamedConfig(name, len - 1);
+	const StringView retval = GetNamedConfig(name, len - 1);
 	return (retval.first != nullptr && retval.second > 0 ? BoolParm(retval.first[0]) : false);
 }
 // ConfigSection::GetNamedBool: Retrieve boolean parameter with the specified name (string version)
 // - Bases decision on first character only, as determined by BoolParm utility function
 _Check_return_ inline bool ConfigFile::ConfigSection::GetNamedBool(const std::string& name) const {
-	const StrLenPair retval = GetNamedConfig(name.data(), name.length());
+	const StringView retval = GetNamedConfig(name.data(), name.length());
 	return (retval.first != nullptr && retval.second > 0 ? BoolParm(retval.first[0]) : false);
 }
 

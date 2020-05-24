@@ -21,8 +21,8 @@ public:
 	// Type definitions - HSM operation (used as RoutableMessage::subtype value):
 	enum class Operation : Subtype {
 		Unspecified = 0,
-		GenerateKey = 1,	// INPUTS: MODIFIER (R), KEK (O?) DEST MODIFIER(?) / OUTPUTS: KEY(MFK), KEY(KEK), KCV
-		TranslateKey = 2,	// INPUTS: KEY (R), KEK (R), CHK (O), SRC MODIFIER (R), DST MODIFIER (?) / OUTPUTS: KEY(MFK)
+		GenerateKey = 1,
+		TranslateKey = 2,
 		TranslatePIN = 3	// INPUTS: SRC KEY (R), PIN(SRC) (R), DST KEY (R), PAN (R) / OUTPUTS: PIN(DST)
 	};
 
@@ -46,12 +46,15 @@ public:
 		KeyOutMFK = 101,	// KeyIn encrypted under requested modifier of MFK
 		KeyOutKEK = 102,	// KeyIn encrypted under requested modifier of KEK
 		KCVOut = 103,		// KCV of KeyOut
-		PINOut = 104		// PINIn encrypted under PEKDst
+		PINOut = 104,		// PINIn encrypted under PEKDst
+		// Misc fields:
+		Echo = 201			// String sent to HSM and expected to be echoed back
 	};
 
 	// Type definitions - Request field and collection (string-view version, for inline requests):
 	using RequestField = std::tuple<FieldName, const char * const, size_t>;
 	using RequestFieldSet = std::vector<RequestField>;
+	using StringView = std::pair<const char*, size_t>;
 
 	// Type definitions - Response field and collection (copy/string-owning version, for responses):
 	using ResponseField = std::pair<FieldName, std::string>;
@@ -63,8 +66,12 @@ public:
 		return std::make_shared<HSMRequest>(pass_key{}, op, std::move(_requestfields));
 	}
 	_Check_return_ static FieldName GetFieldName(const RequestField& rf) noexcept {return std::get<0>(rf);}
+	_Check_return_ static bool IsField(const RequestField& rf, FieldName fn) noexcept {return (std::get<0>(rf) == fn);}
 	_Check_return_ static const char* GetFieldValue(const RequestField& rf) noexcept {return std::get<1>(rf);}
 	_Check_return_ static size_t GetFieldLength(const RequestField& rf) noexcept {return std::get<2>(rf);}
+	_Check_return_ static StringView GetFieldView(const RequestField& rf) noexcept {
+		return {std::get<1>(rf), std::get<2>(rf)};
+	}
 
 	//======================================================================================================================
 	// Public non-static accessors

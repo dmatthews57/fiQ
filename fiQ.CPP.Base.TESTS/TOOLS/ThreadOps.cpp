@@ -50,7 +50,8 @@ namespace fiQCPPBaseTESTS
 		
 		TEST_METHOD(SpinLocks)
 		{
-			Locks::SpinLock sl(true, true);
+			bool alwaystrue = true;
+			Locks::SpinLock sl(alwaystrue, true);
 
 			// Lock/unlock testing:
 			{bool IsLocked = false;
