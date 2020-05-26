@@ -72,8 +72,8 @@ public:
 	// Defaulted destructor (no special logic required)
 	~Tokenizer() = default;
 	// Move and copy constructors
-	Tokenizer(Tokenizer&&);
-	Tokenizer(const Tokenizer&);
+	Tokenizer(Tokenizer&&) noexcept(false);
+	Tokenizer(const Tokenizer&) noexcept(false);
 	// Deleted default constructor, assignment operators
 	Tokenizer() = delete;
 	Tokenizer& operator=(const Tokenizer&) = delete;
@@ -140,12 +140,12 @@ private:
 
 //==========================================================================================================================
 // Public move constructor: No special logic required as object will take over memory owned by original
-inline Tokenizer::Tokenizer(Tokenizer&& t) : toks(std::move(t.toks)), StringCopy(std::move(t.StringCopy)) {
-	printf("Tokenizer move ctor called\n");
+inline Tokenizer::Tokenizer(Tokenizer&& t) noexcept(false) : toks(std::move(t.toks)), StringCopy(std::move(t.StringCopy)) {
+	printf("Tokenizer move ctor called\n");	// TODO: REMOVE THIS, JUST FOR DEBUGGING
 }
 // Public copy constructor: Requires logic to reposition pointers to this object, if necessary
-inline Tokenizer::Tokenizer(const Tokenizer& t) : toks(t.toks), StringCopy(t.StringCopy) {
-	printf("Tokenizer copy ctor called\n");
+inline Tokenizer::Tokenizer(const Tokenizer& t) noexcept(false) : toks(t.toks), StringCopy(t.StringCopy) {
+	printf("Tokenizer copy ctor called\n");	// TODO: REMOVE THIS, JUST FOR DEBUGGING
 	if(StringCopy.empty() == false) {
 		// Copied object owns its own memory, which means pointers in toks vector point currently point to copied object;
 		// we need to re-point them to this object:

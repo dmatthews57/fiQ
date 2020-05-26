@@ -158,6 +158,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="HSM\FuturexHSMNode.cpp" />
     <ClCompile Include="LOGGING\LogMessageBuilder.cpp" />
     <ClCompile Include="TOOLS\ConfigFile.cpp" />
     <ClCompile Include="TOOLS\Exceptions.cpp" />

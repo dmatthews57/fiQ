@@ -18,6 +18,9 @@
     <Filter Include="Source Files\Logging">
       <UniqueIdentifier>{02ffe143-718d-46d8-93b2-76ffeaa10814}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\HSM">
+      <UniqueIdentifier>{96a2c099-c343-44cf-90d4-51d11f11b3e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TOOLS\ValueOps.cpp">
@@ -58,6 +61,9 @@
     </ClCompile>
     <ClCompile Include="LOGGING\LogMessageBuilder.cpp">
       <Filter>Source Files\Logging</Filter>
+    </ClCompile>
+    <ClCompile Include="HSM\FuturexHSMNode.cpp">
+      <Filter>Source Files\HSM</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

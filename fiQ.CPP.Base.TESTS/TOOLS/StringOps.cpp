@@ -287,7 +287,7 @@ namespace fiQCPPBaseTESTS
 			static const char compval[] = "00FEDCBA9876543210";
 			for(size_t s = 0; s <= 18; ++s) {
 				Assert::AreEqual(s, StringOps::Ascii::FlexWriteString(temp, testval, s).second, L"Wrong number of hex chars written");
-				Assert::AreEqual(0, memcmp(temp, compval + (18 - s), 18 - s), L"Incorrect string written");
+				Assert::AreEqual(0, memcmp(temp, compval + (18 - s), s), L"Incorrect string written");
 			}
 		}
 

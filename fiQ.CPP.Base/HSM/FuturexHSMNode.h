@@ -23,7 +23,7 @@ public:
 
 	//======================================================================================================================
 	// Public constructor (locked by base class pass_key), destructor
-	FuturexHSMNode(pass_key) noexcept : HSMNode(HSMType::Futurex), EchoLock(true), EchoCount(0) {}
+	FuturexHSMNode(pass_key, const std::string& _name) : HSMNode(_name, HSMType::Futurex), EchoLock(true), EchoCount(0) {}
 	~FuturexHSMNode() = default;
 
 	// Deleted copy/move constructors and assignment operators

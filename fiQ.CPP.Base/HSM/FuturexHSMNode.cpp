@@ -413,7 +413,7 @@ _Check_return_ Tokenizer FuturexHSMNode::ExecRequest(const std::string& Request)
 			return Tokenizer::CreateCopy<10>(Response + 1, --RespLen, ';');
 		}
 		else if(memcmp(Response, "[AOERRO;", 8) == 0) { // HSM error - log result for debugging purposes
-			LogMessage::ContextEntries ctx{{"FuturexError", Response}};
+			LogMessage::ContextEntries ctx{{"SourceName", GetName()},{"FuturexError", Response}};
 			LOG_FROM_TEMPLATE_CONTEXT(LogLevel::Warn, &ctx, "Error response to [{:S6}] command", Request.substr(1,6));
 		}
 	}

@@ -8,7 +8,6 @@
 namespace FIQCPPBASE {
 
 class HSMNode : public MessageNode {
-protected: struct pass_key {}; // Private function pass-key definition
 public:
 
 	//======================================================================================================================
@@ -19,12 +18,7 @@ public:
 
 	//======================================================================================================================
 	// Named constructor - Create HSMNode of the specified type
-	_Check_return_ static std::shared_ptr<HSMNode> Create(HSMType _type);
-
-	//======================================================================================================================
-	// Pure virtual function definitions for child classes:
-	_Check_return_ virtual bool Init() noexcept(false) = 0;
-	_Check_return_ virtual bool Cleanup() noexcept(false) = 0;
+	_Check_return_ static std::shared_ptr<HSMNode> Create(const std::string& _name, HSMType _type);
 
 	//======================================================================================================================
 	// Default destructor (implicitly virtual; public to allow destruction via base class pointer)
@@ -39,7 +33,8 @@ public:
 protected:
 
 	// Protected default constructor (HSMNodes can be created via child class only)
-	HSMNode(HSMType _hsmtype) noexcept : MessageNode(Type::HSM, static_cast<std::underlying_type_t<HSMType>>(_hsmtype)) {}
+	HSMNode(const std::string& _name, HSMType _hsmtype)
+		: MessageNode(_name, Type::HSM, static_cast<std::underlying_type_t<HSMType>>(_hsmtype)) {}
 
 };
 

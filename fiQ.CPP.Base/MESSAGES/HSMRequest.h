@@ -23,7 +23,7 @@ public:
 		Unspecified = 0,
 		GenerateKey = 1,
 		TranslateKey = 2,
-		TranslatePIN = 3	// INPUTS: SRC KEY (R), PIN(SRC) (R), DST KEY (R), PAN (R) / OUTPUTS: PIN(DST)
+		TranslatePIN = 3
 	};
 
 	// Type definitions - operation result code

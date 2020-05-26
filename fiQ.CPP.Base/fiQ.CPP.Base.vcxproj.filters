@@ -143,5 +143,8 @@
     <ClCompile Include="HSM\FuturexHSMNode.cpp">
       <Filter>Source Files\HSM</Filter>
     </ClCompile>
+    <ClCompile Include="MESSAGES\MessageNode.cpp">
+      <Filter>Source Files\Messages</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
