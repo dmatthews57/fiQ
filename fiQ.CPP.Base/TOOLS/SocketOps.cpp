@@ -25,6 +25,7 @@ _Check_return_ PSecurityFunctionTable& SocketOps::GetFunctionTable() noexcept {
 	return pFunctionTable;
 }
 // SocketOps::Initialize: Start up Winsock library, initialize SChannel interface if required
+GSL_SUPPRESS(type.1) // reinterpret_cast is preferable to C-style cast (required to set INIT_SECURITY_INTERFACE)
 void SocketOps::InitializeSockets(bool TLSRequired) {
 	int wsarc = -1;
 	HMODULE hSChannel = NULL;
@@ -166,7 +167,7 @@ _Check_return_ bool SocketOps::ServerSocket::InitCredentialsFromFile(
 			fseek(CertFile.get(), 0, SEEK_SET);
 			if(fread(FileBuf.get(), sizeof(BYTE), filesize, CertFile.get()) == filesize) {
 				// Construct CRYPT_DATA_BLOB object from buffer and size, open certificate store from it:
-				CRYPT_DATA_BLOB fdata = {static_cast<DWORD>(filesize), FileBuf.get()};
+				CRYPT_DATA_BLOB fdata = {gsl::narrow_cast<DWORD>(filesize), FileBuf.get()};
 				hMyCertStore = PFXImportCertStore(&fdata, StringOps::ConvertToWideString(FilePassword).c_str(), 0);
 				if(hMyCertStore == nullptr) {
 					LastErrString = "PFXImportCertStore: " + Exceptions::ConvertCOMError(GetLastError());
@@ -233,7 +234,8 @@ _Check_return_ bool SocketOps::ServerSocket::CompleteInitCredentials(const std::
 	return CredentialsValid();
 }
 // ServerSocket::TLSNegotiate: Perform server-side TLS negotiation on new socket connection
-_Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps::SessionSocketPtr& sp, int Timeout) {
+_Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(
+	const SocketOps::SessionSocketPtr& sp, int Timeout) {
 	// Validate input socket, validate this object's TLS credentials
 	if((sp.get() ? sp->TLSReady() : false) == false) {
 		sp->LastErrString = "TLS negotiation failed: Invalid socket";
@@ -298,7 +300,7 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 
 			// Set up TLS objects - assign incoming data as token (with NULL array terminator), attempt accept:
 			InBuffers[0].pvBuffer = sp->ReadBuf.get();
-			InBuffers[0].cbBuffer = static_cast<unsigned long>(sp->ReadBufBytes);
+			InBuffers[0].cbBuffer = gsl::narrow_cast<unsigned long>(sp->ReadBufBytes);
 			InBuffers[0].BufferType = SECBUFFER_TOKEN;
 			InBuffers[1].pvBuffer = nullptr;
 			InBuffers[1].cbBuffer = 0;
@@ -561,7 +563,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::TLSNegotiate(int Time
 
 			// Now take data we have received, assign it as token in TLS objects and attempt initialization:
 			InBuffers[0].pvBuffer = ReadBuf.get();
-			InBuffers[0].cbBuffer = static_cast<unsigned long>(ReadBufBytes);
+			InBuffers[0].cbBuffer = gsl::narrow_cast<unsigned long>(ReadBufBytes);
 			InBuffers[0].BufferType = SECBUFFER_TOKEN;
 			InBuffers[1].pvBuffer = nullptr;
 			InBuffers[1].cbBuffer = 0;
@@ -680,7 +682,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::SendTLS(_In_reads_(le
 		Buffers[0].cbBuffer = StreamSizes.cbHeader;
 		Buffers[0].BufferType = SECBUFFER_STREAM_HEADER;
 		Buffers[1].pvBuffer = SendBuf.get() + StreamSizes.cbHeader;
-		Buffers[1].cbBuffer = static_cast<unsigned long>(len);
+		Buffers[1].cbBuffer = gsl::narrow_cast<unsigned long>(len);
 		Buffers[1].BufferType = SECBUFFER_DATA;
 		Buffers[2].pvBuffer = SendBuf.get() + StreamSizes.cbHeader + len;
 		Buffers[2].cbBuffer = StreamSizes.cbTrailer;
@@ -860,7 +862,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::PrivateReadTLS(int Ti
 			// Set up incoming message TLS objects and attempt to decrypt:
 			SecBuffer Buffers[4] = {0};
 			Buffers[0].pvBuffer = ReadBuf.get();
-			Buffers[0].cbBuffer = static_cast<unsigned long>(ReadBufBytes);
+			Buffers[0].cbBuffer = gsl::narrow_cast<unsigned long>(ReadBufBytes);
 			Buffers[0].BufferType = SECBUFFER_DATA;
 			Buffers[1].BufferType = Buffers[2].BufferType = Buffers[3].BufferType = SECBUFFER_EMPTY;
 			SecBufferDesc BufferDesc = {0};

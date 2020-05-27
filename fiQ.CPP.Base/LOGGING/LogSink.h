@@ -139,7 +139,7 @@ private:
 	}
 
 	// Private static object accessors
-	static std::unique_ptr<LogSink>& GetSinkPtr() noexcept;
+	static std::unique_ptr<LogSink>& GetSinkPtr() noexcept(false);
 	static void AddOrReplaceSinkPtr(LogLevel minlevel, std::unique_ptr<LogSink>&& sink);
 	static LogEnrichers& GetEnrichers() noexcept;
 	static LogLevel& GetMinLogLevel() noexcept;

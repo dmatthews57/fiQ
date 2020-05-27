@@ -60,13 +60,13 @@ public:
 	// Reassignment function: Reset this object, create copy of new read-only source string and tokenize
 	// - See "Create" function notes above re: MaxToks and "delimiter" parameter
 	template<size_t MaxToks, typename...Args>
-	Tokenizer& AssignCopy(_In_reads_opt_z_(len) const char* buf, size_t len, Args&&...delimiter);
+	Tokenizer& AssignCopy(_In_reads_opt_z_(len) const char* buf, size_t len, Args&&...delimiter) noexcept(false);
 	template<size_t MaxToks, typename...Args>
-	Tokenizer& AssignCopy(const std::string& Src, Args&&...delimiter);
+	Tokenizer& AssignCopy(const std::string& Src, Args&&...delimiter) noexcept(false);
 	// Reassignment function: Reset this object, tokenize new writable source string in place
 	// - See "Create" function notes above re: MaxToks and "delimiter" parameter
 	template<size_t MaxToks, typename...Args>
-	Tokenizer& AssignInline(_Inout_updates_opt_z_(len + 1) char* buf, size_t len, Args&&...delimiter);
+	Tokenizer& AssignInline(_Inout_updates_opt_z_(len + 1) char* buf, size_t len, Args&&...delimiter) noexcept(false);
 
 	//======================================================================================================================
 	// Defaulted destructor (no special logic required)
@@ -179,7 +179,8 @@ inline constexpr Tokenizer::Tokenizer(
 //==========================================================================================================================
 // AssignCopy: Reset object, create copy of read-only source string and tokenize
 template<size_t MaxToks, typename...Args>
-inline Tokenizer& Tokenizer::AssignCopy(_In_reads_opt_z_(len) const char* buf, size_t len, Args&&...delimiter) {
+inline Tokenizer& Tokenizer::AssignCopy(
+	_In_reads_opt_z_(len) const char* buf, size_t len, Args&&...delimiter) noexcept(false) {
 	static_assert(MaxToks > 0, "Invalid MaxToks value");
 	toks.clear();
 	if(len > 0 && buf) { // Allocate new bytes for copy, destroying any existing data
@@ -192,13 +193,14 @@ inline Tokenizer& Tokenizer::AssignCopy(_In_reads_opt_z_(len) const char* buf, s
 }
 // AssignCopy: Pass read-only source string to buffer version of function:
 template<size_t MaxToks, typename...Args>
-inline Tokenizer& Tokenizer::AssignCopy(const std::string& Src, Args&&...delimiter) {
+inline Tokenizer& Tokenizer::AssignCopy(const std::string& Src, Args&&...delimiter) noexcept(false) {
 	static_assert(MaxToks > 0, "Invalid MaxToks value");
 	return AssignCopy<MaxToks>(Src.data(), Src.length(), std::forward<Args>(delimiter)...);
 }
 // AssignCopy: Reset object, create copy of read-only source string and tokenize
 template<size_t MaxToks, typename...Args>
-inline Tokenizer& Tokenizer::AssignInline(_Inout_updates_opt_z_(len + 1) char* buf, size_t len, Args&&...delimiter) {
+inline Tokenizer& Tokenizer::AssignInline(
+	_Inout_updates_opt_z_(len + 1) char* buf, size_t len, Args&&...delimiter) noexcept(false) {
 	static_assert(MaxToks > 0, "Invalid MaxToks value");
 	toks.clear();
 	StringCopy.clear();

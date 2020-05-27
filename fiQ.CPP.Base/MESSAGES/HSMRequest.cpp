@@ -6,7 +6,7 @@
 using namespace FIQCPPBASE;
 
 //==========================================================================================================================
-const std::string& HSMRequest::EMPTYSTR() {
+const std::string& HSMRequest::EMPTYSTR() noexcept {
 	static const std::string emptystr;
 	return emptystr;
 }

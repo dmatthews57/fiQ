@@ -58,7 +58,7 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(2ULL, toks.TokenCount(), L"Incorrect number of tokens read");
 			Assert::AreEqual(13ULL, toks.Length(0), L"Token 0 invalid length");
 			Assert::AreEqual("Field1|Field2", toks[0], L"Token 0 incorrect value");
-			Tokenizer::Token token = toks.GetToken(1);
+			const Tokenizer::Token token = toks.GetToken(1);
 			Assert::AreEqual(6ULL, token.second, L"Token 1 incorrect length");
 			Assert::AreEqual("Field3", token.first, L"Token 1 incorrect value");
 			// Re-parse from new string

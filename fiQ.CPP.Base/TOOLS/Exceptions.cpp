@@ -71,6 +71,7 @@ void Exceptions::StructuredExceptionTranslator(unsigned int u, _EXCEPTION_POINTE
 }
 
 // UnhandledExceptionFilter: Capture any exceptions not handled by application
+GSL_SUPPRESS(con.3) // Parameter cannot be const - would not match expected signature
 LONG Exceptions::UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep) {
 	// Log exception details to stderr for debugging purposes:
 	LogSink::StdErrLog("UNHANDLED EXCEPTION 0x%X in Thread ID %08X: %s",
@@ -96,7 +97,7 @@ namespace FIQCPPBASE {
 	};
 };
 // UnrollException: Unroll nested exceptions into context collection
-_Check_return_ LogMessage::ContextEntries Exceptions::UnrollException(const std::exception& e) noexcept {
+_Check_return_ LogMessage::ContextEntries Exceptions::UnrollException(const std::exception& e) noexcept(false) {
 	// Create a vector of exception details (ordered from outermost to innermost):
 	std::vector<std::string> exceptions;
 	Exceptions::AddExceptionToVector(exceptions, e);
@@ -110,7 +111,7 @@ _Check_return_ LogMessage::ContextEntries Exceptions::UnrollException(const std:
 	return retval;
 }
 // UnrollExceptionString: Unroll nested exceptions into an easy-to-display string
-_Check_return_ std::string Exceptions::UnrollExceptionString(const std::exception& e) noexcept {
+_Check_return_ std::string Exceptions::UnrollExceptionString(const std::exception& e) noexcept(false) {
 
 	// Create a vector of exception details (ordered from outermost to innermost):
 	std::vector<std::string> exceptions;

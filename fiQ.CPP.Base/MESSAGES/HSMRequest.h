@@ -106,7 +106,7 @@ public:
 private:
 
 	// Static accessor to produce persistent invalid field value:
-	static const std::string& EMPTYSTR();
+	static const std::string& EMPTYSTR() noexcept;
 
 	// Private members
 	const RequestFieldSet requestfields;	// Outgoing request values, must be provided to constructor
@@ -116,14 +116,13 @@ private:
 
 //==========================================================================================================================
 // HSMRequest::GetResponseField: Search through response vector and return first matching value
+GSL_SUPPRESS(lifetime) // Response vector member will live at least as long as this object
 _Check_return_ inline const std::string& HSMRequest::GetResponseField(FieldName fname) const {
-	for(auto seek = responsefields.cbegin(); seek != responsefields.cend(); ++seek) {
-		if(seek->first == fname) {
-#pragma warning (suppress : 26487) // Iterator points to member variable, reference will last as long as this object
-			return seek->second;
-		}
-	}
-	return EMPTYSTR(); // Response field not present
+	auto seek = std::find_if(
+		responsefields.cbegin(),
+		responsefields.cend(),
+		[fname](const ResponseField& r) noexcept -> bool { return (r.first == fname); });
+	return (seek == responsefields.cend() ? EMPTYSTR() : seek->second);
 }
 // HSMRequest::SetResponse: Allow HSM processor to set result code
 inline void HSMRequest::SetResponse(Result _result) noexcept {

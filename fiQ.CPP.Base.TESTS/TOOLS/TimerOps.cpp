@@ -17,7 +17,7 @@ namespace fiQCPPBaseTESTS
 		const int SHOULD_NOT_BE = 11; // Should never actually execute
 
 		// Member function to be scheduled:
-		void UpdateInt(int& tgt, int val) {tgt = val;}
+		void UpdateInt(int& tgt, int val) noexcept(false) {tgt = val;}
 
 		TEST_CLASS_INITIALIZE(Class_Init) // Executes before any TEST_METHODs
 		{
@@ -79,7 +79,7 @@ namespace fiQCPPBaseTESTS
 		class IntWrapper {
 		public:
 			bool IsTimerSet() const noexcept {return t.IsSet();}
-			void UpdateInt(int j) const {i = j;}
+			void UpdateInt(int j) const noexcept(false) {i = j;}
 			IntWrapper(int& _i, int _j) : i(_i) {
 				t.Start(
 					std::chrono::milliseconds(100),

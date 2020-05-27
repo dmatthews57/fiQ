@@ -112,7 +112,7 @@ private:
 	template<size_t s, std::enable_if_t<(s > (N + N)), int> = 0> // Terminal case, end of tuple reached
 	void BuildElement(char*, std::string&, LogMessage::ContextEntries&) const noexcept(false) {}
 	template<size_t s, std::enable_if_t<(s <= (N + N) && (s % 2) != 0), int> = 0> // Placeholder case
-	GSL_SUPPRESS(con.4) // "arg" value below is sometimes pointer, sometimes not - can't always be const const
+	//GSL_SUPPRESS(con.4) // "arg" value below is sometimes pointer, sometimes not - can't always be const const
 	void BuildElement(
 		_Out_writes_(LogMessageTemplate::MAX_PLACEHOLDER_LEN) char* buf,
 		std::string& message, LogMessage::ContextEntries& context) const noexcept(false) {

@@ -14,7 +14,7 @@ namespace fiQCPPBaseTESTS
 		
 		TEST_METHOD(BytesRemain)
 		{
-			char temp[10] = {0}, *start = temp, *mid = temp + 2, *end = temp + 10;
+			const char temp[10] = {0}, * const start = temp, * const mid = temp + 2, * const end = temp + 10;
 			#pragma warning (suppress : 6387)
 			Assert::AreEqual(0ULL, StringOps::BytesAvail(start, nullptr), L"Start-to-nullptr length invalid");
 			Assert::AreEqual(0ULL, StringOps::BytesAvail(nullptr, start), L"Nullptr-to-start length invalid");
@@ -283,7 +283,7 @@ namespace fiQCPPBaseTESTS
 		{
 			char temp[20] = {0};
 			
-			const unsigned long long testval = 0xFEDCBA9876543210ULL;
+			constexpr unsigned long long testval = 0xFEDCBA9876543210ULL;
 			static const char compval[] = "00FEDCBA9876543210";
 			for(size_t s = 0; s <= 18; ++s) {
 				Assert::AreEqual(s, StringOps::Ascii::FlexWriteString(temp, testval, s).second, L"Wrong number of hex chars written");

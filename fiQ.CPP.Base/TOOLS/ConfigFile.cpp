@@ -9,7 +9,7 @@ using namespace FIQCPPBASE;
 
 //==========================================================================================================================
 // ConfigSection::EmptyStr: Initialize and return empty static string
-_Check_return_ const std::string& ConfigFile::ConfigSection::EmptyStr() {
+_Check_return_ const std::string& ConfigFile::ConfigSection::EmptyStr() noexcept {
 	static const std::string EMPTYSTR;
 	return EMPTYSTR;
 }
@@ -31,7 +31,7 @@ _Check_return_ bool ConfigFile::ConfigSection::ReadSection(
 
 			// Locate first non-whitespace character in line
 			char *StartPtr = ReadBuf;
-			for(StartPtr; StartPtr < EndReadBuf ? std::isspace(static_cast<unsigned char>(StartPtr[0])) : false; ++StartPtr);
+			for(StartPtr; StartPtr < EndReadBuf ? std::isspace(gsl::narrow_cast<unsigned char>(StartPtr[0])) : false; ++StartPtr);
 			// Ensure StartPtr has not exceeded bound (shouldn't be possible, since null terminator should stop loop):
 			if(StartPtr >= EndReadBuf) throw FORMAT_RUNTIME_ERROR("Unterminated line read from file (1)");
 			// If this is the start of a new section, reset file pointer to start of this line and break immediately;
@@ -66,7 +66,7 @@ _Check_return_ bool ConfigFile::ConfigSection::ReadSection(
 
 				// If this is a non-whitespace character (including slash, quote or equals) AND we are not currently
 				// reading a comment, advance EndPtr to ensure bytes to this point are included in data
-				if(!std::isspace(static_cast<unsigned char>(ptr[0])) && !inComment) EndPtr = ptr;
+				if(!std::isspace(gsl::narrow_cast<unsigned char>(ptr[0])) && !inComment) EndPtr = ptr;
 			}
 			// Ensure ptr has not exceeded bound (shouldn't be possible, since null terminator should stop loop):
 			if(ptr >= EndReadBuf) throw FORMAT_RUNTIME_ERROR("Unterminated line read from file (2)");
@@ -91,14 +91,15 @@ _Check_return_ bool ConfigFile::Initialize(_In_z_ const char* FileName) {
 
 		// Set up read buffer (shared throughout this function)
 		static constexpr size_t ReadBufSize = 1024;
-		char ReadBuf[ReadBufSize + 5] = {0}, * const EndReadBuf = ReadBuf + ReadBufSize;
+		char ReadBuf[ReadBufSize + 5] = {0};
+		const char * const EndReadBuf = ReadBuf + ReadBufSize;
 
 		// Read all lines from file, looking for [SECTIONHEADERS]
 		while(fgets(ReadBuf, ReadBufSize, fp.get())) {
 			// Locate first non-whitespace character in line; for some reason StartPtr has to be initialized at declaration
 			// AND in body of loop, to satisfy code analyzer (it believes StartPtr is uninitialized otherwise):
 			const char *StartPtr = ReadBuf;
-			for(StartPtr = ReadBuf; StartPtr < EndReadBuf ? std::isspace(static_cast<unsigned char>(StartPtr[0])) : false; ++StartPtr);
+			for(StartPtr = ReadBuf; StartPtr < EndReadBuf ? std::isspace(gsl::narrow_cast<unsigned char>(StartPtr[0])) : false; ++StartPtr);
 			// Ensure StartPtr has not exceeded bound (shouldn't be possible, since null terminator should stop loop):
 			if(StartPtr >= EndReadBuf) throw FORMAT_RUNTIME_ERROR("Unterminated line read from file (3)");
 			// If first character is not opening of section name tag, ignore line and continue reading:
@@ -106,7 +107,7 @@ _Check_return_ bool ConfigFile::Initialize(_In_z_ const char* FileName) {
 
 			// Advance to first non-whitespace character inside [] block; if not found or block is empty, discard (first
 			// ensure StartPtr has not exceeded bound - shouldn't be possible, since null terminator should stop loop):
-			for(++StartPtr; StartPtr < EndReadBuf ? std::isspace(static_cast<unsigned char>(StartPtr[0])) : false; ++StartPtr);
+			for(++StartPtr; StartPtr < EndReadBuf ? std::isspace(gsl::narrow_cast<unsigned char>(StartPtr[0])) : false; ++StartPtr);
 			if(StartPtr >= EndReadBuf) throw FORMAT_RUNTIME_ERROR("Unterminated line read from file (4)");
 			else if(ValueOps::Is(StartPtr[0]).InSet(0, ']')) continue;
 
@@ -139,7 +140,7 @@ _Check_return_ bool ConfigFile::Initialize(_In_z_ const char* FileName) {
 						LastQuote = nullptr;
 					}
 					// If data appears after last quotation mark, clear it so it is not used as end position
-					else if(!std::isspace(static_cast<unsigned char>(ptr[0]))) LastQuote = nullptr;
+					else if(!std::isspace(gsl::narrow_cast<unsigned char>(ptr[0]))) LastQuote = nullptr;
 				}
 			}
 			else EndPtr = strchr(StartPtr, ']');

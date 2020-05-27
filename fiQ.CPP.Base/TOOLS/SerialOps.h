@@ -35,8 +35,8 @@ public:
 
 	protected:
 		// Untyped (pointer/size-based) functions must be implemented by child class:
-		_Check_return_ virtual bool DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const = 0;
-		_Check_return_ virtual bool DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const = 0;
+		_Check_return_ virtual bool DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const noexcept(false) = 0;
+		_Check_return_ virtual bool DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const noexcept(false) = 0;
 	};
 
 	//======================================================================================================================
@@ -46,8 +46,8 @@ public:
 		FileStream(_In_ FILE* _FHandle) noexcept : FHandle(_FHandle) {}
 	private:
 		// Base class function implementations
-		_Check_return_ bool DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const override;
-		_Check_return_ bool DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const override;
+		_Check_return_ bool DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const noexcept(false) override;
+		_Check_return_ bool DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const noexcept(false) override;
 		// Private member variables
 		FILE* const FHandle;
 	};
@@ -57,8 +57,8 @@ public:
 			: MemBuf(_MemBuf), MemBufSize(_MemBufSize) {}
 	private:
 		// Base class function implementations
-		_Check_return_ bool DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const override;
-		_Check_return_ bool DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const override;
+		_Check_return_ bool DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const noexcept(false) override;
+		_Check_return_ bool DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const noexcept(false) override;
 		// Private member variables
 		mutable char* MemBuf;		// Members are mutable to allow const member functions to modify
 		mutable size_t MemBufSize;	// (since this object will only be accessible through const handles)
@@ -138,18 +138,21 @@ _Check_return_ inline bool SerialOps::Stream::Write(_In_reads_(SrcSize) const ch
 
 //==========================================================================================================================
 // FileStream function implementations
-_Check_return_ inline bool SerialOps::FileStream::DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const {
+_Check_return_ inline bool SerialOps::FileStream::DoRead(
+	_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const noexcept(false) {
 	try {return (FHandle ? (fread(Tgt, TgtSize, 1, FHandle) == 1) : false);}
 	catch(const std::exception&) {return false;}
 }
-_Check_return_ inline bool SerialOps::FileStream::DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const {
+_Check_return_ inline bool SerialOps::FileStream::DoWrite(
+	_In_reads_(SrcSize) const void* Src, size_t SrcSize) const noexcept(false) {
 	try {return (FHandle ? (fwrite(Src, SrcSize, 1, FHandle) == 1) : false);}
 	catch(const std::exception&) {return false;}
 }
 
 //==========================================================================================================================
 // MemoryStream function implementations
-_Check_return_ inline bool SerialOps::MemoryStream::DoRead(_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const {
+_Check_return_ inline bool SerialOps::MemoryStream::DoRead(
+	_Out_writes_(TgtSize) void* Tgt, size_t TgtSize) const noexcept(false) {
 	try {
 		if(MemBuf && MemBufSize >= TgtSize) {
 			// Read data from member buffer to target, advance pointer and deduct from size counter
@@ -162,7 +165,8 @@ _Check_return_ inline bool SerialOps::MemoryStream::DoRead(_Out_writes_(TgtSize)
 	catch(const std::exception&) {} // No action required, just return false
 	return false;
 }
-_Check_return_ inline bool SerialOps::MemoryStream::DoWrite(_In_reads_(SrcSize) const void* Src, size_t SrcSize) const {
+_Check_return_ inline bool SerialOps::MemoryStream::DoWrite(
+	_In_reads_(SrcSize) const void* Src, size_t SrcSize) const noexcept(false) {
 	try {
 		if(MemBuf && MemBufSize >= SrcSize) {
 			// Write data to member buffer, advance pointer and deduct from size counter

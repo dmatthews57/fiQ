@@ -29,7 +29,7 @@ namespace fiQCPPBaseTESTS
 			static_assert(lmt.PlaceholderCount() == LogMessageTemplate::MAX_PLACEHOLDERS, "Invalid number of placeholders");
 			std::string temp = "nonliteral";
 			const std::string expected = "7654321.234567891 SECOND EDCBA0987 THIRD 321 lit FIFTH nonliteral SIXTH {sixth:F22}";
-			auto lmb = CreateLogMessageBuilder<lmt.PlaceholderCount()>(LogLevel::Debug, lmt, 7654321.23456789123, 0xFEDCBA0987, 321UL, "literal", temp);
+			const auto lmb = CreateLogMessageBuilder<lmt.PlaceholderCount()>(LogLevel::Debug, lmt, 7654321.23456789123, 0xFEDCBA0987, 321UL, "literal", temp);
 			auto lm = lmb.Build(LogMessage::ContextEntries {{"SAMPLE1","Whatever1"},{"SAMPLE2",std::string("wHATEVER2")}});
 			Assert::AreEqual(LogLevel::Debug, lm->GetLevel(), L"Unexpected log level");
 			Assert::AreEqual(6ULL, lm->GetContext().size(), L"Unexpected number of context entries");
@@ -43,7 +43,7 @@ namespace fiQCPPBaseTESTS
 			static_assert(lmt.IsValid(), "Invalid logging template string");
 			static_assert(lmt.PlaceholderCount() == 0, "Invalid number of placeholders");
 			const std::string expected = "Message with no\n placeholders";
-			auto lmb = CreateLogMessageBuilder<lmt.PlaceholderCount()>(LogLevel::Info, lmt);
+			const auto lmb = CreateLogMessageBuilder<lmt.PlaceholderCount()>(LogLevel::Info, lmt);
 			auto lm = lmb.Build(LogMessage::ContextEntries {{"SAMPLE1","Whatever1"}});
 			Assert::AreEqual(LogLevel::Info, lm->GetLevel(), L"Unexpected log level");
 			Assert::AreEqual(1ULL, lm->GetContext().size(), L"Unexpected number of context entries");

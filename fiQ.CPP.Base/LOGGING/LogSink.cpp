@@ -8,7 +8,7 @@ using namespace FIQCPPBASE;
 
 //==========================================================================================================================
 // LogSink::GetSinkPtr: Create and return reference to static unique_ptr (populated with default ConsoleSink)
-std::unique_ptr<LogSink>& LogSink::GetSinkPtr() noexcept {
+std::unique_ptr<LogSink>& LogSink::GetSinkPtr() noexcept(false) {
 	static std::unique_ptr<LogSink> ls = std::make_unique<ConsoleSink>();
 	return ls;
 }

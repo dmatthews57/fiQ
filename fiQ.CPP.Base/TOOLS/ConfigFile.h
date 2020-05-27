@@ -124,7 +124,7 @@ public:
 
 		//==================================================================================================================
 		// Private members
-		_Check_return_ static const std::string& EmptyStr(); // Access empty string when needed
+		_Check_return_ static const std::string& EmptyStr() noexcept; // Access empty string when needed
 		std::deque<ConfigEntry> ConfigEntries;	// Collection of ConfigEntry objects
 		const std::string SectionName;			// Name of this configuration section
 	};
@@ -184,7 +184,7 @@ _Check_return_ inline ConfigFile::ConfigSection::StringView ConfigFile::ConfigSe
 
 				// Set iterator at start of data [first non-whitespace character following separator; note if there are no
 				// valid characters, NonBlank will be equal to Entry.cend(); also note Entry is already right-trimmed]:
-				std::string::const_iterator NonBlank = std::find_if_not(
+				const std::string::const_iterator NonBlank = std::find_if_not(
 					StartOfData,
 					Entry.cend(),
 					[](int ch){return std::isspace(ch);}

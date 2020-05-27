@@ -50,7 +50,7 @@ public:
 	// - Does not null-terminate Tgt
 	// - Returns number of bytes written to Tgt (always "len")
 	// - If return value not required, just use memset
-	_Check_return_ static size_t ExMemSet(_Out_writes_all_(len) char* Tgt, char value, size_t len) {
+	_Check_return_ static size_t ExMemSet(_Out_writes_all_(len) char* Tgt, char value, size_t len) noexcept(false) {
 		return memset(Tgt, value, len), len;
 	}
 	// ExStrCpy: Copies exactly "len" bytes of "buf" into "Tgt"
@@ -59,7 +59,8 @@ public:
 	// - If return value not required, use StrCpy instead
 	// - If copying string literal, use ExStrCpyLiteral instead
 	// - If exact length of input string not known, use FlexStrCpy instead
-	_Check_return_ static size_t ExStrCpy(_Out_writes_all_(len) char* Tgt, _In_reads_(len) const char * buf, size_t len) {
+	_Check_return_ static size_t ExStrCpy(
+		_Out_writes_all_(len) char* Tgt, _In_reads_(len) const char * buf, size_t len) noexcept(false) {
 		return memcpy(Tgt, buf, len), len;
 	}
 	// ExStrCpyLiteral: Version of ExStrCpy accepting a string literal (calculates length automatically)
@@ -77,7 +78,7 @@ public:
 	// - If return value not required, use StrCpy instead
 	// - If exact input length known, use ExStrCpy instead
 	_Check_return_ static size_t FlexStrCpy(
-		_Out_writes_z_(MaxLen + 1) char* Tgt, _In_reads_opt_z_(strlen(buf)) const char* buf, size_t MaxLen) {
+		_Out_writes_z_(MaxLen + 1) char* Tgt, _In_reads_opt_z_(strlen(buf)) const char* buf, size_t MaxLen) noexcept(false) {
 		if(MaxLen > 0 && buf) {
 			const size_t buflen = strlen(buf);
 			if(buflen > 0) memcpy(Tgt, buf, MaxLen > buflen ? buflen : MaxLen);
@@ -89,7 +90,7 @@ public:
 	// StrCpy: Dumb copy of "len" bytes from "buf" into "Tgt"
 	// - Null-terminates Tgt (meaning Tgt must allow len + 1 bytes, to allow for terminator)
 	// - If copying from string literal, use StrCpyLiteral instead
-	static void StrCpy(_Out_writes_z_(len + 1) char* Tgt, _In_reads_opt_(len) const char* buf, size_t len) {
+	static void StrCpy(_Out_writes_z_(len + 1) char* Tgt, _In_reads_opt_(len) const char* buf, size_t len) noexcept(false) {
 		if(len > 0 && buf) {
 			memcpy(Tgt, buf, len);
 			Tgt[len] = 0;
@@ -114,7 +115,7 @@ public:
 		// Char: Safely provide ASCII character for lowest digit of any SIGNED integral value
 		template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0>
 		_Check_return_ static constexpr char Char(T t) noexcept {
-			return DECTAB[static_cast<std::make_unsigned_t<T> >(t < 0 ? -t : t) % 10];
+			return DECTAB[gsl::narrow_cast<std::make_unsigned_t<T>>(t < 0 ? -t : t) % 10];
 		}
 		// IsDecChar: Check if character is an ASCII representation of a decimal character (0-9)
 		_Check_return_ static constexpr bool IsDecChar(char c) noexcept {
@@ -131,8 +132,8 @@ public:
 			// If value is negative, start with one character for negative sign; convert value to t's unsigned complement
 			// plus one [required to safely flip sign on numeric_limits<T>::min()] and call unsigned version of function
 			// (for positive values, just call unsigned immediately)
-			return t < 0 ? (1 + Digits<std::make_unsigned_t<T>, static_cast<std::make_unsigned_t<T> >(~t) + 1>())
-				: Digits<std::make_unsigned_t<T>, static_cast<std::make_unsigned_t<T> >(t) / 10>();
+			return t < 0 ? (1 + Digits<std::make_unsigned_t<T>, gsl::narrow_cast<std::make_unsigned_t<T>>(~t) + 1>())
+				: Digits<std::make_unsigned_t<T>, gsl::narrow_cast<std::make_unsigned_t<T>>(t) / 10>();
 		}
 		// MaxDigits: Determines the maximum number of digits required to represent a given integral type at compile-time
 		template<typename T>
@@ -174,8 +175,8 @@ public:
 			// If value is negative, start with one character for negative sign; convert value to t's unsigned complement
 			// plus one [required to safely flip sign on numeric_limits<T>::min()] and call unsigned version of function
 			// (for positive values, just call unsigned immediately)
-			return t < 0 ? (1 + FlexDigits(static_cast<std::make_unsigned_t<T> >(~t) + 1))
-				: FlexDigits(static_cast<std::make_unsigned_t<T> >(t));
+			return t < 0 ? (1 + FlexDigits(gsl::narrow_cast<std::make_unsigned_t<T>>(~t) + 1))
+				: FlexDigits(gsl::narrow_cast<std::make_unsigned_t<T>>(t));
 		}
 
 		//==================================================================================================================
@@ -215,7 +216,7 @@ public:
 		// - Unsigned version, will treat negative number strings as invalid (i.e. will return zero)
 		// - No default return type (this function must be explicitly invoked)
 		template<typename T, std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T>, int> = 0>
-		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) {
+		_Check_return_ static T FlexReadString(_In_z_ const char* buf, size_t len = 0) noexcept(false) {
 			// Default length is maximum digits, ensure user-provided value is capped
 			if(len == 0 || len > MaxDigits_v<T>) len = MaxDigits_v<T>;
 			// Read all characters from string, until maximum length or invalid character reached
@@ -224,7 +225,7 @@ public:
 				rc *= 10;
 				rc += static_cast<unsigned long long>(buf[s]) - '0';
 			}
-			return static_cast<T>(rc > (std::numeric_limits<T>::max)() ? (std::numeric_limits<T>::max)() : rc);
+			return gsl::narrow_cast<T>(rc > (std::numeric_limits<T>::max)() ? (std::numeric_limits<T>::max)() : rc);
 		}
 
 		//==================================================================================================================
@@ -267,7 +268,7 @@ public:
 			// Add number of zeroes we will be writing to return value (deduct this value from bytes to be written by
 			// recursive call, so that default overload is then selected):
 			return ExMemSet(Tgt, '0', len - MaxDigits_v<T>)
-				+ ExWriteString<MaxDigits_v<T> >(Tgt + len - MaxDigits_v<T>, t);
+				+ ExWriteString<MaxDigits_v<T>>(Tgt + len - MaxDigits_v<T>, t);
 		}
 		// ExWriteString: Write signed integral value into string, with exact number of digits specified at compile time
 		// - This overload is called for signed values - writes negative sign (if required), and makes recursive call
@@ -281,8 +282,8 @@ public:
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T t) noexcept(false) {
 			return (t < 0) ?
-				(Tgt[0] = '-', 1 + ExWriteString<len - 1>(Tgt + 1, gsl::narrow_cast<std::make_unsigned_t<T> >(-t)))
-				: ExWriteString<len>(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t));
+				(Tgt[0] = '-', 1 + ExWriteString<len - 1>(Tgt + 1, gsl::narrow_cast<std::make_unsigned_t<T>>(-t)))
+				: ExWriteString<len>(Tgt, gsl::narrow_cast<std::make_unsigned_t<T>>(t));
 		}
 
 		//==================================================================================================================
@@ -336,8 +337,8 @@ public:
 			static_assert(MaxSize == MaxDigits_v<T>, "Don't override MaxSize");
 			return t < 0 ?
 				(Tgt[0] = '-',
-					1 + FlexWriteString<std::make_unsigned_t<T> >(Tgt + 1, gsl::narrow_cast<std::make_unsigned_t<T> >(-t))
-				) : FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t));
+					1 + FlexWriteString<std::make_unsigned_t<T>>(Tgt + 1, gsl::narrow_cast<std::make_unsigned_t<T>>(-t))
+				) : FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T>>(t));
 		}
 		// FlexWriteString: Write integral value into string, with a specific number of digits (determined at runtime)
 		// - This overload is called for all unsigned values
@@ -385,10 +386,10 @@ public:
 		static std::pair<char*,size_t> FlexWriteString(_Out_writes_all_(ExactDigits) char* Tgt, T t, size_t ExactDigits) {
 			if(t < 0 && ExactDigits > 0) {
 				Tgt[0] = '-';
-				return {Tgt, 1 + FlexWriteString<std::make_unsigned_t<T> >(
-					Tgt + 1, static_cast<std::make_unsigned_t<T> >(~t) + 1, ExactDigits - 1).second};
+				return {Tgt, 1 + FlexWriteString<std::make_unsigned_t<T>>(
+					Tgt + 1, static_cast<std::make_unsigned_t<T>>(~t) + 1, ExactDigits - 1).second};
 			}
-			else if(ExactDigits > 0) return {Tgt, FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t), ExactDigits).second};
+			else if(ExactDigits > 0) return {Tgt, FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T>>(t), ExactDigits).second};
 			else return {Tgt, 0};
 		}
 
@@ -531,7 +532,7 @@ public:
 			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static size_t ExWriteString(_Out_writes_all_(len) char* Tgt, T Src) {
-			return ExWriteString<len>(Tgt, static_cast<std::make_unsigned_t<T> >(Src));
+			return ExWriteString<len>(Tgt, gsl::narrow_cast<std::make_unsigned_t<T>>(Src));
 		}
 
 		//==================================================================================================================
@@ -574,7 +575,7 @@ public:
 			std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>, int> = 0
 		>
 		static std::pair<char*,size_t> FlexWriteString(_Out_writes_all_(ExactDigits) char* Tgt, T t, size_t ExactDigits) {
-			return FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T> >(t), ExactDigits);
+			return FlexWriteString(Tgt, gsl::narrow_cast<std::make_unsigned_t<T>>(t), ExactDigits);
 		}
 
 		//==================================================================================================================
@@ -582,7 +583,7 @@ public:
 		// - For example, PackTo<3>("12ABCD") writes values {0x12, 0xAB, 0xCD} into first three bytes of target
 		// - Returns total number of bytes written (always "len")
 		template<size_t len>
-		static size_t PackTo(_In_reads_(len * 2) const char* Source, _Out_writes_(len) char* Dest) {
+		static size_t PackTo(_In_reads_(len * 2) const char* Source, _Out_writes_(len) char* Dest) noexcept(false) {
 			Dest[0] = ByteToHex(Source);
 			return 1 + PackTo<len - 1>(Source + 2, Dest + 1);
 		}
@@ -592,7 +593,7 @@ public:
 		// - For example, UnpackFrom<3>({0x12, 0xAB, 0xCD}) writes string "12ABCD" into first six bytes of target
 		// - Returns total number of bytes written (always "len * 2")
 		template<size_t len>
-		static size_t UnpackFrom(_In_reads_(len) const char* Source, _Out_writes_(len * 2) char* Dest) {
+		static size_t UnpackFrom(_In_reads_(len) const char* Source, _Out_writes_(len * 2) char* Dest) noexcept(false) {
 			Dest[0] = Char((Source[0] >> 4) & 0x0F);
 			Dest[1] = Char(Source[0] & 0x0F);
 			return 2 + UnpackFrom<len - 1>(Source + 1, Dest + 2);

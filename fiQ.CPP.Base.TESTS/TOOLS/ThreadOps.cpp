@@ -10,7 +10,7 @@ namespace fiQCPPBaseTESTS
 	class ThreadTest : private ThreadOperator<int> {
 	public:
 		bool StartThread() {return ThreadStart();}
-		bool ThreadStarted() const {return (ThreadIsStopped() == false);}
+		bool ThreadStarted() const noexcept {return (ThreadIsStopped() == false);}
 		void Queue(int i) {
 			if(i < 10) ThreadQueueWork(i); // Test emplace construction
 			else if(i < 20) ThreadQueueWork(std::make_unique<int>(i)); // Test rvalue unique_ptr
@@ -20,14 +20,14 @@ namespace fiQCPPBaseTESTS
 			}
 		}
 		bool WaitStopThread(int Timeout) {return ThreadWaitStop(Timeout);}
-		int GetTotal() const {return MyTotal;}
+		int GetTotal() const noexcept {return MyTotal;}
 
 		ThreadTest() = default;
 		ThreadTest(const ThreadTest&) = delete;
 		ThreadTest(ThreadTest&&) = delete;
 		ThreadTest& operator=(const ThreadTest&) = delete;
 		ThreadTest& operator=(ThreadTest&&) = delete;
-		~ThreadTest() = default;
+		virtual ~ThreadTest() = default;
 
 	private:
 		unsigned int ThreadExecute() override {

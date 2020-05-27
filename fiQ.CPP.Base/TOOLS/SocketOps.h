@@ -152,7 +152,7 @@ public:
 		_Check_return_ SessionSocketPtr StartAccept(_Inout_opt_ sockaddr_in* saddr = nullptr,
 			size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
 		// PollAccept function: Checks whether TLS negotiation is required (if so, attempts to complete without blocking)
-		_Check_return_ Result PollAccept(SessionSocketPtr& sp);
+		_Check_return_ Result PollAccept(const SessionSocketPtr& sp);
 		//==================================================================================================================
 		// Credential management functions
 		_Check_return_ bool CredentialsValid() const noexcept {
@@ -183,7 +183,7 @@ public:
 
 		// Private utility functions
 		_Check_return_ bool CompleteInitCredentials(const std::string& TLSMethod);
-		_Check_return_ Result TLSNegotiate(SessionSocketPtr& sp, int Timeout);
+		_Check_return_ Result TLSNegotiate(const SessionSocketPtr& sp, int Timeout);
 
 		// Private member variables
 		SOCKET SocketHandle = INVALID_SOCKET;	// Handle to listener socket
@@ -734,7 +734,7 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::ServerSocket::Start
 	return sp;
 }
 // ServerSocket::PollAccept: Ensure socket is connected, continue TLS negotiation (without blocking) if required
-_Check_return_ inline SocketOps::Result SocketOps::ServerSocket::PollAccept(SessionSocketPtr& sp) {
+_Check_return_ inline SocketOps::Result SocketOps::ServerSocket::PollAccept(const SessionSocketPtr& sp) {
 	if((sp.get() ? sp->SocketValid() : false) == false) return Result::InvalidSocket;
 	else if(sp->Valid()) return Result::OK; // If Valid returns true, TLS is not required OR negotiation complete
 

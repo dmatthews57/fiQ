@@ -30,7 +30,8 @@ namespace fiQCPPBaseTESTS
 			const std::uniform_int_distribution<> dis(INT_MIN, INT_MAX);
 			std::unique_ptr<char[]> TempBuf = std::make_unique<char[]>(200);
 			for(int i = 0; i < 20; ++i) {
-				int j = dis(rd), k = 0;
+				const int j = dis(rd);
+				int k = 0;
 				Assert::IsTrue(SerialOps::MemoryStream(TempBuf.get(), 200).Write(j), L"Serialization failed");
 				Assert::IsTrue(SerialOps::MemoryStream(TempBuf.get(), 200).Read(k), L"Deserialization failed");
 				Assert::AreEqual(j, k, L"Deserialized value does not match");
@@ -40,7 +41,8 @@ namespace fiQCPPBaseTESTS
 		enum class Color { Red, Green, Blue };
 		TEST_METHOD(SerializeEnum)
 		{
-			Color red = Color::Red, blue = Color::Blue;
+			const Color red = Color::Red;
+			Color blue = Color::Blue;
 			std::unique_ptr<char[]> TempBuf = std::make_unique<char[]>(200);
 			Assert::IsTrue(SerialOps::MemoryStream(TempBuf.get(), 200).Write(red), L"Serialization failed");
 			Assert::IsTrue(SerialOps::MemoryStream(TempBuf.get(), 200).Read(blue), L"Deserialization failed");

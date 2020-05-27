@@ -44,11 +44,11 @@ namespace FIQCPPBASE {
 		LONG UnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS *ep);
 
 		// UnrollException: Unroll nested exceptions into context collection
-		_Check_return_ LogMessage::ContextEntries UnrollException(const std::exception& e) noexcept;
+		_Check_return_ LogMessage::ContextEntries UnrollException(const std::exception& e) noexcept(false);
 
 		// UnrollExceptionString: Unroll nested exceptions into an easy-to-display string (each exception prefixed with
 		// newline, tab and depth counter, e.g. "\n\t0 Exception text\n\t1 First chance\n\t2 Second chance"...etc)
-		_Check_return_ std::string UnrollExceptionString(const std::exception& e) noexcept;
+		_Check_return_ std::string UnrollExceptionString(const std::exception& e) noexcept(false);
 
 	}; // (end namespace Exceptions)
 

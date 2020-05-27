@@ -72,7 +72,7 @@ private:
 	};
 
 	// Static CommLink accessor function (creates precisely one CommLink during process lifetime)
-	_Check_return_ static CommLink& GetCommLink();
+	_Check_return_ static CommLink& GetCommLink() noexcept;
 };
 
 //==========================================================================================================================

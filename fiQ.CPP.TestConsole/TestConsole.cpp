@@ -23,11 +23,27 @@ public:
 	void IBConnect() noexcept(false) override {printf("IBConnect\n");}
 	void IBData() noexcept(false) override {printf("IBData\n");}
 	void IBDisconnect() noexcept(false) override {printf("IBDisconnect\n");}
-	Comms::ListenerTicket reg() {
-		return Comms::RegisterListener(shared_from_this(), Connection{});
+	Comms::ListenerTicket listen() {
+		//printf("[%s]\n", c.GetConfigParm("test1").c_str());
+		//printf("[%s]\n", c.GetConfigParm("Test2.......................").c_str());
+		//printf("[%s]\n", c.GetConfigParm("NOTHERE").c_str());
+		//c.SetRemote("192.168.0.1", 8000);
+		//c.SetRemote("172.16.0.1:1234");
+		//Connection::ConfigParms parms{{"TEST1","VAL1"},{"TEST2","VAL2"}};
+		//c.SetConfigParms(std::move(parms));
+		//c.SetConfigParms(Connection::ConfigParms{{"TEST1","VAL1"},{"TEST2","VAL2"}});
+		//c.AddConfigParm(std::string("TEST1....................."), std::string("TEST2....................."));
+		return Comms::RegisterListener(shared_from_this(),
+			Connection{}.SetLocal(8000).ReadConfig(Tokenizer::CreateCopy<10>("EXTHEADER|RAW|TEST1=VALUE1..................|TEST2.......................=VALUE2|BLAH||", "|")));
 	}
-	testrec() = default;
+	Comms::SessionTicket call() {
+		return Comms::RequestConnect(shared_from_this(),
+			Connection{}.SetRemote("127.0.0.1:8000").SetFlagOn(CommFlags::ExtendedHeader));
+	}
+	testrec() : CommsClient(name) {}
 	~testrec() {printf("TestRec destr\n");}
+private:
+	const std::string name = "TESTREC";
 };
 
 int main()
@@ -42,9 +58,11 @@ int main()
 	try {
 		Comms::Initialize();
 
-		{std::shared_ptr<CommsClient> tr = std::make_shared<testrec>();
-		/*auto ticket = tr->reg();
-		printf("Ticket: %llu\n", ticket);*/
+		{std::shared_ptr<testrec> tr = std::make_shared<testrec>();
+		const auto lticket = tr->listen();
+		printf("Listener ticket: %llu\n", lticket);
+		const auto sticket = tr->call();
+		printf("Session ticket: %llu\n", sticket);
 		}
 
 		Comms::Cleanup();

@@ -6,7 +6,7 @@
 using namespace FIQCPPBASE;
 
 //==========================================================================================================================
-_Check_return_ const std::string& Connection::EMPTYSTR() {
+_Check_return_ const std::string& Connection::EMPTYSTR() noexcept {
 	static const std::string emptystr;
 	return emptystr;
 }

@@ -7,6 +7,7 @@ using namespace FIQCPPBASE;
 
 //==========================================================================================================================
 // TimerExecutor::Initialize: Start up worker threads for timer execution
+GSL_SUPPRESS(type.4) // C-style cast of beginthreadex return value required (it is defined as unsigned, but may return -1)
 void TimerHandle::TimerExecutor::Initialize(size_t TimerThreads) {
 	if(ThreadsShouldRun == false) {
 

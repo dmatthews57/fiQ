@@ -11,7 +11,7 @@ void Comms::Cleanup() {GetCommLink().Cleanup();}
 
 //==========================================================================================================================
 // Comms::GetCommLink: Create static object and return by reference
-_Check_return_ Comms::CommLink& Comms::GetCommLink() {
+_Check_return_ Comms::CommLink& Comms::GetCommLink() noexcept {
 	static Comms::CommLink clink; // Will be created only once, on first call to this function
 	return clink;
 }
@@ -26,13 +26,13 @@ void Comms::CommLink::Cleanup() {
 _Check_return_ Comms::ListenerTicket Comms::CommLink::RegisterListener(
 	const std::shared_ptr<CommsClient>& client, Connection&& connection) {
 	if(client.get() == nullptr) return 0;
-	UNREFERENCED_PARAMETER(connection);
+	printf("Registering listener for [%s] on port %u\n", client->GetName().c_str(), connection.GetLocalPort());
 	return 0;
 }
 _Check_return_ Comms::SessionTicket Comms::CommLink::RequestConnect(
 	const std::shared_ptr<CommsClient>& client, Connection&& connection) {
 	if(client.get() == nullptr) return 0;
-	UNREFERENCED_PARAMETER(connection);
+	printf("Requesting connection for [%s] to %s:%u\n", client->GetName().c_str(), connection.GetRemoteAddress().c_str(), connection.GetRemotePort());
 	return 0;
 }
 _Check_return_ Comms::Result Comms::CommLink::PollConnect(SessionTicket session) {

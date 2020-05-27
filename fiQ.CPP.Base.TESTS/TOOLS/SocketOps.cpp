@@ -57,7 +57,7 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->PollConnect(), (L"PollConnect: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Send simple message from client:
-			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			{const char sendbuf[] = "HELLO"; const size_t bs = strlen(sendbuf);
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Wait for and receive message at server (read available):
@@ -68,7 +68,7 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual(sendbuf, readbuf, L"Invalid message received");}
 
 			// Send simple message from client:
-			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			{const char sendbuf[] = "HELLO"; const size_t bs = strlen(sendbuf);
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Wait for and receive message at server (read exact):
@@ -119,7 +119,7 @@ namespace fiQCPPBaseTESTS
 			Logger::WriteMessage(("Client CipherSuite: " + ClientSession->GetTLSCipherSuite()).c_str());
 
 			// Send simple message from client:
-			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			{const char sendbuf[] = "HELLO"; const size_t bs = strlen(sendbuf);
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Receive message at server (read available):
@@ -131,7 +131,7 @@ namespace fiQCPPBaseTESTS
 			Logger::WriteMessage(readbuf);}
 
 			// Send simple message from client:
-			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			{const char sendbuf[] = "HELLO"; const size_t bs = strlen(sendbuf);
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Receive message at server (read exact):
@@ -184,7 +184,7 @@ namespace fiQCPPBaseTESTS
 			Logger::WriteMessage(("Client CipherSuite: " + ClientSession->GetTLSCipherSuite()).c_str());
 
 			// Send simple message from client:
-			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			{const char sendbuf[] = "HELLO"; const size_t bs = strlen(sendbuf);
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Receive message at server (read available):
@@ -196,7 +196,7 @@ namespace fiQCPPBaseTESTS
 			Logger::WriteMessage(readbuf);}
 
 			// Send simple message from client:
-			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			{const char sendbuf[] = "HELLO"; const size_t bs = strlen(sendbuf);
 			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
 
 			// Receive message at server (read exact):
