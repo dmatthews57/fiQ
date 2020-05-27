@@ -37,6 +37,12 @@
     <Filter Include="Source Files\HSM">
       <UniqueIdentifier>{fa61b920-33e2-4414-8786-26ee8dbd95ad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Comms">
+      <UniqueIdentifier>{10b2afb2-ed91-4b32-ab31-799c06110187}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Comms">
+      <UniqueIdentifier>{2d547fde-d125-4b04-80c6-af3e61f14d90}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -114,6 +120,15 @@
     <ClInclude Include="HSM\FuturexHSMNode.h">
       <Filter>Header Files\HSM</Filter>
     </ClInclude>
+    <ClInclude Include="COMMS\Comms.h">
+      <Filter>Header Files\Comms</Filter>
+    </ClInclude>
+    <ClInclude Include="COMMS\CommsClient.h">
+      <Filter>Header Files\Comms</Filter>
+    </ClInclude>
+    <ClInclude Include="COMMS\Connection.h">
+      <Filter>Header Files\Comms</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -145,6 +160,12 @@
     </ClCompile>
     <ClCompile Include="MESSAGES\MessageNode.cpp">
       <Filter>Source Files\Messages</Filter>
+    </ClCompile>
+    <ClCompile Include="COMMS\Comms.cpp">
+      <Filter>Source Files\Comms</Filter>
+    </ClCompile>
+    <ClCompile Include="COMMS\Connection.cpp">
+      <Filter>Source Files\Comms</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

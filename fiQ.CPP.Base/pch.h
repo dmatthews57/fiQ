@@ -7,8 +7,6 @@
 #ifndef PCH_H
 #define PCH_H
 
-#define FD_SETSIZE 255		// Redefine FD_SETSIZE to allow up to 255 sockets per select
-
 #ifndef WINVER				// Allow use of features specific to Windows 2008 R2/Win7 or later.
 #define WINVER 0x0601		// Change this to the appropriate value to target other versions of Windows.
 #endif

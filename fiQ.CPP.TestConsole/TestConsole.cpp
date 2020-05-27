@@ -16,6 +16,20 @@ void Outermost() {
 	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("OUTERMOSTMSG"));}
 }
 
+#include "Comms/Comms.h"
+
+class testrec : public CommsClient {
+public:
+	void IBConnect() noexcept(false) override {printf("IBConnect\n");}
+	void IBData() noexcept(false) override {printf("IBData\n");}
+	void IBDisconnect() noexcept(false) override {printf("IBDisconnect\n");}
+	Comms::ListenerTicket reg() {
+		return Comms::RegisterListener(shared_from_this(), Connection{});
+	}
+	testrec() = default;
+	~testrec() {printf("TestRec destr\n");}
+};
+
 int main()
 {
 #ifdef _DEBUG
@@ -26,7 +40,14 @@ int main()
 	SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 
 	try {
+		Comms::Initialize();
 
+		{std::shared_ptr<CommsClient> tr = std::make_shared<testrec>();
+		/*auto ticket = tr->reg();
+		printf("Ticket: %llu\n", ticket);*/
+		}
+
+		Comms::Cleanup();
 		return 0;
 	}
 	catch(const std::runtime_error& e) {

@@ -89,7 +89,7 @@ namespace fiQCPPBaseTESTS
 			Assert::AreEqual("HELLO", readbuf, L"Invalid message received");}
 		}
 
-		TEST_METHOD(TLSConnections)
+		TEST_METHOD(TLSConnections_Accept)
 		{
 			// Open up listening socket:
 			Server = SocketOps::ServerSocket::Create();
@@ -115,7 +115,73 @@ namespace fiQCPPBaseTESTS
 			Assert::IsTrue(result.get(), (L"Accept: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
 			th.join();}
 
-			Logger::WriteMessage(("CipherSuite: " + ServerSession->GetTLSCipherSuite()).c_str());
+			Logger::WriteMessage(("Server CipherSuite: " + ServerSession->GetTLSCipherSuite()).c_str());
+			Logger::WriteMessage(("Client CipherSuite: " + ClientSession->GetTLSCipherSuite()).c_str());
+
+			// Send simple message from client:
+			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+
+			// Receive message at server (read available):
+			char readbuf[64] = {0}; size_t br = 0;
+			Assert::AreEqual(SocketOps::Result::OK, ServerSession->WaitEvent(100), (L"Read wait: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+			Assert::AreEqual(SocketOps::Result::OK, ServerSession->ReadAvailable(readbuf, 50, br), (L"Read: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+			Assert::AreEqual(bs, br, L"Invalid number of bytes read");
+			Assert::AreEqual(sendbuf, readbuf, L"Invalid message received");
+			Logger::WriteMessage(readbuf);}
+
+			// Send simple message from client:
+			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);
+			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, bs), (L"Send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+
+			// Receive message at server (read exact):
+			char readbuf[64] = {0};
+			Assert::AreEqual(SocketOps::Result::OK, ServerSession->WaitEvent(100), (L"Read wait: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+			Assert::AreEqual(SocketOps::Result::OK, ServerSession->ReadExact(readbuf, bs, 100), (L"Read: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+			Assert::AreEqual(sendbuf, readbuf, L"Invalid message received");
+			Logger::WriteMessage(readbuf);}
+
+			// Send packet format from client:
+			{const char sendbuf[] = "\x00\x05HELLO";
+			Assert::AreEqual(SocketOps::Result::OK, ClientSession->Send(sendbuf, 7), (L"Packet send: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+
+			// Receive packet at server:
+			char readbuf[64] = {0}; size_t br = 0;
+			Assert::AreEqual(SocketOps::Result::OK, ServerSession->WaitEvent(100), (L"Packet wait: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+			Assert::AreEqual(SocketOps::Result::OK, ServerSession->ReadPacket(readbuf, 50, br, 100), (L"Packet read: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+			Assert::AreEqual(5ULL, br, L"Invalid number of bytes read");
+			Assert::AreEqual("HELLO", readbuf, L"Invalid message received");
+			Logger::WriteMessage(readbuf);}
+		}
+
+		TEST_METHOD(TLSConnections_StartAccept)
+		{
+			// Open up listening socket:
+			Server = SocketOps::ServerSocket::Create();
+			Assert::IsTrue(Server->Open(11223), (L"Open: " + StringOps::ConvertToWideString(Server->GetLastErrString())).c_str());
+			Assert::IsTrue(Server->InitCredentialsFromStore("localhost", "", false), (L"InitCredentials: " + StringOps::ConvertToWideString(Server->GetLastErrString())).c_str());
+
+			// Start client socket connection:
+			ClientSession = SocketOps::SessionSocket::StartConnect("127.0.0.1", 11223, true);
+			Assert::IsTrue(ClientSession->SocketValid(), (L"StartConnect: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+
+			// Wait for and accept connection request on server:
+			Assert::AreEqual(SocketOps::Result::OK, Server->WaitEvent(10), (L"Server wait: " + StringOps::ConvertToWideString(Server->GetLastErrString())).c_str());
+			ServerSession = Server->StartAccept();
+			Assert::IsTrue(ServerSession->SocketValid(), (L"Server StartAccept: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());
+
+			// Loop negotiation (execution needs to alternate between client and server):
+			{SocketOps::Result crc = SocketOps::Result::Timeout, src = SocketOps::Result::Timeout;
+			for(int i = 0; i < 10 && (SocketOps::ResultTimeout(crc) || SocketOps::ResultTimeout(src)); ++i) {
+				if(SocketOps::ResultTimeout(crc)) crc = ClientSession->PollConnect();
+				if(SocketOps::ResultTimeout(src)) src = Server->PollAccept(ServerSession);
+			}
+			// Ensure negotiation was successful on both sides:
+			Assert::AreEqual(SocketOps::Result::OK, crc, (L"PollConnect: " + StringOps::ConvertToWideString(ClientSession->GetLastErrString())).c_str());
+			Assert::AreEqual(SocketOps::Result::OK, src, (L"PollAccept: " + StringOps::ConvertToWideString(ServerSession->GetLastErrString())).c_str());}
+
+			Logger::WriteMessage(("Server CipherSuite: " + ServerSession->GetTLSCipherSuite()).c_str());
+			Logger::WriteMessage(("Client CipherSuite: " + ClientSession->GetTLSCipherSuite()).c_str());
 
 			// Send simple message from client:
 			{const char sendbuf[] = "HELLO"; size_t bs = strlen(sendbuf);

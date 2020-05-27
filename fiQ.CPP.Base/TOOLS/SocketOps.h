@@ -20,14 +20,15 @@ enum class SocketFlags : unsigned short {
 	ExtendedHeader = 0x0001	// Packets using extended 4-byte header (2 length bytes, 2 control bytes)
 };
 inline constexpr SocketFlags operator|(SocketFlags a, SocketFlags b) noexcept {
-	return static_cast<SocketFlags>(
-		static_cast<std::underlying_type_t<SocketFlags> >(a) | static_cast<std::underlying_type_t<SocketFlags> >(b));
+	using SocketFlagsType = std::underlying_type_t<SocketFlags>;
+	return static_cast<SocketFlags>(static_cast<SocketFlagsType>(a) | static_cast<SocketFlagsType>(b));
 }
 inline constexpr SocketFlags operator|=(SocketFlags& a, SocketFlags b) noexcept {
 	return (a = (a | b));
 }
 inline constexpr bool operator&(SocketFlags a, SocketFlags b) noexcept {
-	return ((static_cast<std::underlying_type_t<SocketFlags> >(a) & static_cast<std::underlying_type_t<SocketFlags> >(b)) != 0);
+	using SocketFlagsType = std::underlying_type_t<SocketFlags>;
+	return ((static_cast<SocketFlagsType>(a) & static_cast<SocketFlagsType>(b)) != 0);
 }
 
 //==========================================================================================================================
@@ -131,9 +132,8 @@ public:
 		}
 		_Check_return_ bool SocketValid() const noexcept {return (SocketHandle != INVALID_SOCKET);}
 		_Check_return_ bool IsSocket(SOCKET s) const noexcept {return (s == SocketHandle);}
-		bool AddToFD(fd_set& fd) const noexcept(false) {
-			return (fd.fd_count < FD_SETSIZE && SocketHandle != INVALID_SOCKET) ?
-				(fd.fd_array[fd.fd_count++] = SocketHandle, true) : false;
+		bool AddToFD(std::vector<WSAPOLLFD>& fd) const noexcept(false) {
+			return (SocketHandle != INVALID_SOCKET) ? (fd.push_back(WSAPOLLFD{SocketHandle,POLLRDNORM,0}), true) : false;
 		}
 		//==================================================================================================================
 		// Socket management functions
@@ -143,9 +143,16 @@ public:
 		//==================================================================================================================
 		// Accept function: Accepts new incoming session
 		// - Note that this function will block waiting for a new connection, caller is assumed to have used WaitEvent
-		// - Note that this function will also block to perform TLS negotiation (may add async TLS option in the future)
+		// - Note that this function will also block to perform TLS negotiation, if required
 		_Check_return_ SessionSocketPtr Accept(_Inout_opt_ sockaddr_in* saddr = nullptr,
 			int TLSTimeout = 0, size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
+		// StartAccept function: Accepts new incoming session
+		// - Note that this function will block waiting for a new connection, caller is assumed to have used WaitEvent
+		// - Note that this function will NOT block to perform TLS negotiation
+		_Check_return_ SessionSocketPtr StartAccept(_Inout_opt_ sockaddr_in* saddr = nullptr,
+			size_t TLSBufferSize = SocketOps::TLS_BUFFER_SIZE_DEFAULT);
+		// PollAccept function: Checks whether TLS negotiation is required (if so, attempts to complete without blocking)
+		_Check_return_ Result PollAccept(SessionSocketPtr& sp);
 		//==================================================================================================================
 		// Credential management functions
 		_Check_return_ bool CredentialsValid() const noexcept {
@@ -205,7 +212,7 @@ public:
 		// External accessor functions
 		_Check_return_ const std::string& GetLastErrString() const noexcept {return LastErrString;}
 		_Check_return_ bool Valid() const noexcept {
-			return (SocketHandle != INVALID_SOCKET && (UsingTLS ? (hContext.dwLower || hContext.dwUpper) : true));
+			return (SocketHandle != INVALID_SOCKET && (UsingTLS ? TLSComplete : true));
 		}
 		_Check_return_ bool SocketValid() const noexcept {return (SocketHandle != INVALID_SOCKET);}
 		_Check_return_ bool IsSocket(SOCKET s) const noexcept {return (s == SocketHandle);}
@@ -216,9 +223,8 @@ public:
 				&& ClearBuf.get()
 			);
 		}
-		bool AddToFD(fd_set& fd) const noexcept(false) {
-			return (fd.fd_count < FD_SETSIZE && SocketHandle != INVALID_SOCKET) ?
-				(fd.fd_array[fd.fd_count++] = SocketHandle, true) : false;
+		bool AddToFD(std::vector<WSAPOLLFD>& fd) const noexcept(false) {
+			return (SocketHandle != INVALID_SOCKET) ? (fd.push_back(WSAPOLLFD{SocketHandle,POLLRDNORM,0}), true) : false;
 		}
 		void SetSessionFlags(SocketFlags sf) noexcept {SessionFlags |= sf;}
 		std::string GetTLSCipherSuite() const {return StringOps::ConvertFromWideString(CipherInfo.szCipherSuite);}
@@ -237,6 +243,7 @@ public:
 		void Close() {
 			SocketOps::Close(SocketHandle);
 			// Reset state of TLS member variables (if any)
+			TLSComplete = false;
 			ReadBufBytes = ClearBufBytes = 0;
 			memset(&StreamSizes, 0, sizeof(StreamSizes));
 			memset(&CipherInfo, 0, sizeof(CipherInfo));
@@ -251,7 +258,7 @@ public:
 		// Public constructor (locked by private pass-key), public destructor
 		SessionSocket(SocketOps::pass_key, bool _UsingTLS, size_t _TLSBufSize) : UsingTLS(_UsingTLS),
 			TLSBufSize(ValueOps::Bounded(SocketOps::TLS_BUFFER_SIZE_MIN, _TLSBufSize, SocketOps::TLS_BUFFER_SIZE_MAX)),
-			SocketHandle(INVALID_SOCKET), SessionFlags(SocketFlags::None),
+			SocketHandle(INVALID_SOCKET), SessionFlags(SocketFlags::None), TLSComplete(false),
 			ReadBuf(nullptr), ReadBufBytes(0), ClearBuf(nullptr), ClearBufBytes(0) {
 			static_assert(SocketOps::TLS_BUFFER_SIZE_MAX <= ULONG_MAX, "Invalid maximum TLS buffer size");
 			if(UsingTLS) {
@@ -306,8 +313,9 @@ public:
 		// Private member variables - TLS-only
 		std::unique_ptr<ClientCredentials> ClientCred = nullptr; // Pointer to client credentials (client mode only)
 		CtxtHandle hContext = {0};						// Security context handle
-		SecPkgContext_StreamSizes StreamSizes = {0};	// Cached stream buffer sizes (based on negotiated protocol)
 		SecPkgContext_CipherInfo CipherInfo = {0};		// Negotiated cipher data
+		SecPkgContext_StreamSizes StreamSizes = {0};	// Cached stream buffer sizes (based on negotiated protocol)
+		bool TLSComplete;					// Flag indicating TLS negotiation has completed
 		std::unique_ptr<char[]>	ReadBuf;	// Standard TLS socket read buffer (holds raw incoming data)
 		size_t ReadBufBytes;				// Number of bytes currently available in ReadBuf
 		std::unique_ptr<char[]>	ClearBuf;	// Buffered TLS data buffer (holds decrypted cleartext data)
@@ -441,13 +449,16 @@ _Check_return_ inline SOCKET SocketOps::Connect(
 			}
 			// Attempt connection to remote:
 			if(connect(s, reinterpret_cast<const sockaddr*>(&remaddr), sizeof(remaddr)) == SOCKET_ERROR) {
-				const int wsaerr = WSAGetLastError();
+				int wsaerr = WSAGetLastError();
 				if(wsaerr == WSAEWOULDBLOCK && Timeout > 0) {
 					// Socket in nonblocking mode with timeout will return WOULDBLOCK; wait up to timeout for writability:
-					fd_set fd = {1,s};
-					timeval tv = {Timeout / 1000, (Timeout % 1000) * 1000};
-					if(select(1, nullptr, &fd, nullptr, &tv) != 1) {
-						if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(wsaerr);
+					WSAPOLLFD fdarray = {s, POLLWRNORM, 0};
+					const int poll = WSAPoll(&fdarray, 1, Timeout);
+					if(((poll == 1 ? fdarray.revents : 0) & POLLWRNORM) == 0) {
+						if(LastErrString) {
+							if(poll == SOCKET_ERROR) wsaerr = WSAGetLastError();
+							*LastErrString = Exceptions::ConvertCOMError(wsaerr);
+						}
 						SocketOps::Close(s);
 					}
 					// (else socket is connected)
@@ -525,10 +536,9 @@ _Check_return_ inline SocketOps::Result SocketOps::PollConnect(SOCKET s, _Inout_
 	else if(LastErrString) LastErrString->clear();
 	try {
 		// Test socket for writability:
-		fd_set fd = {1, s};
-		timeval tv = {0, 0};
-		const int sel = select(1, nullptr, &fd, nullptr, &tv);
-		if(sel == 1) { // Socket is connected
+		WSAPOLLFD fdarray = {s, POLLWRNORM, 0};
+		const int poll = WSAPoll(&fdarray, 1, 0);
+		if((poll == 1 ? fdarray.revents : 0) & POLLWRNORM) { // Socket is connected
 			// Set socket options before returning (enable keepalive, disable Nagle algorithm):
 			constexpr char keepaliveopt = 1, nodelayopt = 1;
 			setsockopt(s, SOL_SOCKET, SO_KEEPALIVE, &keepaliveopt, sizeof(keepaliveopt));
@@ -538,7 +548,7 @@ _Check_return_ inline SocketOps::Result SocketOps::PollConnect(SOCKET s, _Inout_
 			ioctlsocket(s, FIONBIO, &nbarg);
 			return Result::OK;
 		}
-		else if(sel == 0) return Result::Timeout;
+		else if(poll == 0) return Result::Timeout;
 		else { // Socket error occurred
 			if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(WSAGetLastError());
 			SocketOps::Shutdown(s);
@@ -553,16 +563,13 @@ _Check_return_ inline SocketOps::Result SocketOps::WaitEvent(
 	if(s == INVALID_SOCKET) return Result::InvalidSocket;
 	else if(LastErrString) LastErrString->clear();
 	try {
-		// Set up structures and perform select:
-		fd_set fd = {1, s};
-		timeval tv = {Timeout <= 0 ? 0 : (Timeout / 1000), Timeout <= 0 ? 0 : ((Timeout % 1000) * 1000)};
-		const int sel = select(1, &fd, nullptr, nullptr, &tv);
-		if(sel < 0) { // Socket error occurred
-			if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(WSAGetLastError());
-			SocketOps::Shutdown(s);
-			return Result::Failed;
-		}
-		else return sel > 0 ? Result::OK : Result::Timeout;
+		WSAPOLLFD fdarray = {s, POLLRDNORM, 0};
+		const int poll = WSAPoll(&fdarray, 1, Timeout < 0 ? 0 : Timeout);
+		if((poll == 1 ? fdarray.revents : 0) & POLLRDNORM) return Result::OK;
+		else if(poll >= 0) return Result::Timeout;
+		else if(LastErrString) *LastErrString = Exceptions::ConvertCOMError(WSAGetLastError());
+		SocketOps::Shutdown(s);
+		return Result::Failed;
 	}
 	catch(const std::exception&) {std::throw_with_nested(FORMAT_RUNTIME_ERROR("Socket activity wait failed"));}
 }
@@ -575,12 +582,11 @@ _Check_return_ inline SocketOps::Result SocketOps::Send(
 	else if(LastErrString) LastErrString->clear();
 
 	try {
-		// Set up structures, perform select to ensure socket is writeable:
+		// Set up structures, poll to ensure socket is writeable:
 		Result rc = Result::Timeout;
-		fd_set fd = {1, s};
-		timeval tv = {0, 250000};
-		const int slrc = select(1, nullptr, &fd, nullptr, &tv);
-		if(slrc > 0) {
+		WSAPOLLFD fdarray = {s, POLLWRNORM, 0};
+		const int poll = WSAPoll(&fdarray, 1, 250);
+		if((poll == 1 ? fdarray.revents : 0) & POLLWRNORM) {
 			// Socket is ready for writing; convert length to int (guaranteed safe by validation above) and attempt send;
 			// if successful return immediately, otherwise fall through to logic below:
 			const int ilen = gsl::narrow_cast<int>(len);
@@ -589,7 +595,7 @@ _Check_return_ inline SocketOps::Result SocketOps::Send(
 			else if(LastErrString && src <= 0) *LastErrString = Exceptions::ConvertCOMError(WSAGetLastError());
 			rc = Result::Failed;
 		}
-		else if(slrc == 0) {
+		else if(poll >= 0) {
 			if(LastErrString) *LastErrString = "Socket not ready for writing";
 			rc = Result::Timeout;
 		}
@@ -713,6 +719,31 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::ServerSocket::Accep
 	}
 	return sp;
 }
+// ServerSocket::StartAccept: Use SocketOps static function to accept connection on socket member
+// - If server has TLS credentials, attempts no-timeout TLS session negotiation on new connection before returning
+_Check_return_ inline SocketOps::SessionSocketPtr SocketOps::ServerSocket::StartAccept(
+	_Inout_opt_ sockaddr_in* saddr, size_t TLSBufferSize) {
+	// Create new SessionSocket object, passing along TLS values (if provided)
+	SessionSocketPtr sp = std::make_unique<SessionSocket>(SocketOps::pass_key{}, UsingTLS, TLSBufferSize);
+	// Attempt to accept incoming connection, storing handle in object:
+	sp->SocketHandle = SocketOps::Accept(SocketHandle, saddr, &(sp->LastErrString));
+	// If accept succeeded and TLS negotiation is required, attempt now (with no timeout):
+	if(sp->SocketValid() && UsingTLS) {
+		if(ResultFailed(TLSNegotiate(sp, 0))) sp->Close();
+	}
+	return sp;
+}
+// ServerSocket::PollAccept: Ensure socket is connected, continue TLS negotiation (without blocking) if required
+_Check_return_ inline SocketOps::Result SocketOps::ServerSocket::PollAccept(SessionSocketPtr& sp) {
+	if((sp.get() ? sp->SocketValid() : false) == false) return Result::InvalidSocket;
+	else if(sp->Valid()) return Result::OK; // If Valid returns true, TLS is not required OR negotiation complete
+
+	// Otherwise, TLS negotiation required - ensure socket is readable to prevent blocking, then attempt to continue:
+	Result rc = sp->WaitEvent(0);
+	if(ResultOK(rc)) rc = TLSNegotiate(sp, 0);
+	if(ResultFailed(rc)) sp->Close();
+	return rc;
+}
 #pragma endregion SocketOps::ServerSocket
 
 //==========================================================================================================================
@@ -745,7 +776,9 @@ _Check_return_ inline SocketOps::SessionSocketPtr SocketOps::SessionSocket::Star
 _Check_return_ inline SocketOps::Result SocketOps::SessionSocket::PollConnect(int TLSTimeout, const std::string& TLSMethod) {
 	Result rc = SocketOps::PollConnect(SocketHandle, &LastErrString);
 	if(ResultOK(rc) && UsingTLS) {
-		if(ResultOK((rc = TLSNegotiate(TLSTimeout, TLSMethod))) == false) Close();
+		rc = TLSNegotiate(TLSTimeout, TLSMethod);
+		// If negotiation failed entirely OR has timed out (and we are not waiting), close socket:
+		if(ResultFailed(rc) || (ResultTimeout(rc) && TLSTimeout > 0)) Close();
 	}
 	return rc;
 }

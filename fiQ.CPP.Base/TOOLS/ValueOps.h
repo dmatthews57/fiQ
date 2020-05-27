@@ -97,7 +97,7 @@ private:
 	struct all_same : std::true_type {};
 	template<typename T1, typename T2, typename...Args>
 	struct all_same<T1, T2, Args...>
-		: std::integral_constant<bool, std::is_same_v<std::decay_t<T1>, std::decay_t<T2> > && all_same<T1, Args...>::value > {};
+		: std::integral_constant<bool, std::is_same_v<std::decay_t<T1>, std::decay_t<T2>> && all_same<T1, Args...>::value > {};
 	// Value alias
 	template<typename...Args>
 	static constexpr auto all_same_v = all_same<Args...>::value;

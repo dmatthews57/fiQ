@@ -282,7 +282,7 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 						else {
 							sp->Shutdown();
 							src = Result::Failed;
-							if(br != 0) LastErrString = "TLS negotiation failed: Invalid number of bytes read";
+							if(br != 0) sp->LastErrString = "TLS negotiation failed: Invalid number of bytes read";
 						}
 					}
 					else if(LastErrString.empty()) sp->LastErrString = "TLS negotiation failed: Socket read error";
@@ -361,7 +361,7 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 				// Non-wait error occurred; set error data:
 				sp->Shutdown();
 				rc = Result::Failed;
-				LastErrString = "TLS negotiation failed: " + Exceptions::ConvertCOMError(scRet);
+				sp->LastErrString = "TLS negotiation failed: " + Exceptions::ConvertCOMError(scRet);
 				break;
 			}
 			// Negotiation complete; retrieve cipher info:
@@ -369,7 +369,7 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 				&(sp->hContext), SECPKG_ATTR_CIPHER_INFO, &(sp->CipherInfo))) != SEC_E_OK) {
 				sp->Shutdown();
 				rc = Result::Failed;
-				LastErrString = "QueryContextAttributes (CIPHER_INFO): " + Exceptions::ConvertCOMError(scRet);
+				sp->LastErrString = "QueryContextAttributes (CIPHER_INFO): " + Exceptions::ConvertCOMError(scRet);
 				break;
 			}
 			// Retrieve stream sizes for negotiated protocol:
@@ -377,18 +377,19 @@ _Check_return_ SocketOps::Result SocketOps::ServerSocket::TLSNegotiate(SocketOps
 				&sp->hContext, SECPKG_ATTR_STREAM_SIZES, &sp->StreamSizes)) != SEC_E_OK) {
 				sp->Shutdown();
 				rc = Result::Failed;
-				LastErrString = "QueryContextAttributes (STREAM_SIZES): " + Exceptions::ConvertCOMError(scRet);
+				sp->LastErrString = "QueryContextAttributes (STREAM_SIZES): " + Exceptions::ConvertCOMError(scRet);
 				break;
 			}
 			// Validate stream sizes (we must be able to process a packet with header and trailer):
 			if((static_cast<size_t>(sp->StreamSizes.cbHeader) + sp->StreamSizes.cbTrailer) >= sp->TLSBufSize) {
 				sp->Shutdown();
 				rc = Result::Failed;
-				LastErrString = "TLS negotiation failed: Protocol message size exceeds maximum";
+				sp->LastErrString = "TLS negotiation failed: Protocol message size exceeds maximum";
 				break;
 			}
 
 			// If this point is reached, negotiation successful - break loop now:
+			sp->TLSComplete = true;
 			rc = Result::OK;
 			break;
 		}
@@ -653,6 +654,7 @@ _Check_return_ SocketOps::Result SocketOps::SessionSocket::TLSNegotiate(int Time
 			}
 
 			// If this point is reached, negotiation successful - break loop now:
+			TLSComplete = true;
 			rc = Result::OK;
 			break;
 		}

@@ -151,6 +151,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="COMMS\Comms.h" />
+    <ClInclude Include="COMMS\CommsClient.h" />
+    <ClInclude Include="COMMS\Connection.h" />
     <ClInclude Include="HSM\FuturexHSMNode.h" />
     <ClInclude Include="HSM\HSMNode.h" />
     <ClInclude Include="LOGGING\ConsoleSink.h" />
@@ -178,6 +181,8 @@
     <ClInclude Include="Tools\ValueOps.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="COMMS\Comms.cpp" />
+    <ClCompile Include="COMMS\Connection.cpp" />
     <ClCompile Include="HSM\FuturexHSMNode.cpp" />
     <ClCompile Include="HSM\HSMNode.cpp" />
     <ClCompile Include="LOGGING\LogSink.cpp" />

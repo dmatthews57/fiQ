@@ -125,7 +125,9 @@ _Check_return_ MessageNode::RouteResult FuturexHSMNode::GenerateKey(HSMRequest& 
 			keyoutkek.clear(); // Invalidate field, must be re-read
 			std::string request;
 			request.reserve(100); // Space for two keys plus overhead
-			request.append(HSMLITERAL("[AOTWKA;AS0;AP"));
+			request.append(HSMLITERAL("[AOTWKA;AS;"));
+			request += mfkmod.first[0];
+			request.append(HSMLITERAL(";AP"));
 			request.append(kek.first, kek.second);
 			request.append(HSMLITERAL(";BG"));
 			request.append(keyoutmfk);
