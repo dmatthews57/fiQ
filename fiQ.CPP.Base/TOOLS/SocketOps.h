@@ -60,7 +60,8 @@ public:
 	//======================================================================================================================
 	// InitServer: Create and initialize a SOCKET, bind it to the specified port and (optional) interface and listen
 	// - Returns initialized socket or INVALID_SOCKET on error
-	_Check_return_ static SOCKET InitServer(unsigned short ListenPort, _In_opt_z_ const char* Interface = nullptr, int Backlog = 10,
+	_Check_return_ static SOCKET InitServer(
+		unsigned short ListenPort, _In_opt_z_ const char* Interface = nullptr, int Backlog = 10,
 		_Inout_opt_ std::string* LastErrString = nullptr);
 	// Accept: Accept incoming connection request (will block until client request avaialble)
 	// - "server" input should be a valid, listening socket (as returned by InitServer)
@@ -127,6 +128,7 @@ public:
 		//==================================================================================================================
 		// External accessor functions
 		_Check_return_ const std::string& GetLastErrString() const noexcept {return LastErrString;}
+		_Check_return_ std::string& GetLastErrString() noexcept {return LastErrString;}
 		_Check_return_ bool Valid() const noexcept {
 			return (SocketHandle != INVALID_SOCKET && (UsingTLS ? CredentialsValid() : true));
 		}

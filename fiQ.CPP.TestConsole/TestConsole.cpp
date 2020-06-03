@@ -33,12 +33,17 @@ public:
 		//c.SetConfigParms(std::move(parms));
 		//c.SetConfigParms(Connection::ConfigParms{{"TEST1","VAL1"},{"TEST2","VAL2"}});
 		//c.AddConfigParm(std::string("TEST1....................."), std::string("TEST2....................."));
-		return Comms::RegisterListener(shared_from_this(),
-			Connection{}.SetLocal(8000).ReadConfig(Tokenizer::CreateCopy<10>("EXTHEADER|RAW|TEST1=VALUE1..................|TEST2.......................=VALUE2|BLAH||", "|")));
+		auto c = std::make_shared<Connection>();
+		c->SetLocal(8000).ReadConfig(Tokenizer::CreateCopy<10>("EXTHEADER|RAW|TEST1=VALUE1..................|TEST2.......................=VALUE2|BLAH||TLSCERT=MY(notthere)", "|"));
+		std::string lasterr;
+		auto t = Comms::RegisterListener(shared_from_this(), c, &lasterr);
+		if(t == 0) printf("Registration failed [%s]\n", lasterr.c_str());
+		return t;
 	}
 	Comms::SessionTicket call() {
-		return Comms::RequestConnect(shared_from_this(),
-			Connection{}.SetRemote("127.0.0.1:8000").SetFlagOn(CommFlags::ExtendedHeader));
+		auto c = std::make_shared<Connection>();
+		c->SetRemote("127.0.0.1:8000").SetFlagOn(CommFlags::ExtendedHeader);
+		return Comms::RequestConnect(shared_from_this(), c);
 	}
 	testrec() : CommsClient(name) {}
 	~testrec() {printf("TestRec destr\n");}
@@ -56,16 +61,20 @@ int main()
 	SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 
 	try {
+		SocketOps::InitializeSockets(true);
 		Comms::Initialize();
 
 		{std::shared_ptr<testrec> tr = std::make_shared<testrec>();
 		const auto lticket = tr->listen();
+		printf("Listener ticket: %llu\n", lticket);
+		const auto lticket2 = tr->listen();
 		printf("Listener ticket: %llu\n", lticket);
 		const auto sticket = tr->call();
 		printf("Session ticket: %llu\n", sticket);
 		}
 
 		Comms::Cleanup();
+		SocketOps::CleanupSockets();
 		return 0;
 	}
 	catch(const std::runtime_error& e) {

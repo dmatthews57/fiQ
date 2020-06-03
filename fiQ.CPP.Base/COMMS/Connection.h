@@ -42,6 +42,8 @@ public:
 
 	//======================================================================================================================
 	// External accessor functions
+	_Check_return_ bool IsValidClient() const noexcept {return (!address.empty() && ValueOps::Is(port).InRange(1, 0x7FFF));}
+	_Check_return_ bool IsValidServer() const noexcept {return (address.empty() && ValueOps::Is(port).InRange(1, 0x7FFF));}
 	_Check_return_ const std::string& GetRemoteAddress() const noexcept {return address;}
 	_Check_return_ unsigned short GetRemotePort() const noexcept {return (address.empty() ? 0 : port);}
 	_Check_return_ unsigned short GetLocalPort() const noexcept {return (address.empty() ? port : 0);}
