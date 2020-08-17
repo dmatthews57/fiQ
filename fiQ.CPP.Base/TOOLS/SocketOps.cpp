@@ -98,7 +98,7 @@ _Check_return_ bool SocketOps::ServerSocket::InitCredentialsFromStore(
 	try {
 		// Open "Personal" key in either local machine store or current user store, based in input parameter:
 		hMyCertStore = LocalMachineStore ?
-			CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"MY")
+			CertOpenStore(CERT_STORE_PROV_SYSTEM, 0, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE | CERT_STORE_READONLY_FLAG, L"MY")
 			: CertOpenSystemStore(NULL, L"MY");
 		if(hMyCertStore == nullptr) {
 			LastErrString = (LocalMachineStore ? "CertOpenStore: " : "CertOpenSystemStore: ") + Exceptions::ConvertCOMError(GetLastError());

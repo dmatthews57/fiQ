@@ -213,6 +213,7 @@ public:
 		//==================================================================================================================
 		// External accessor functions
 		_Check_return_ const std::string& GetLastErrString() const noexcept {return LastErrString;}
+		_Check_return_ std::string& GetLastErrString() noexcept {return LastErrString;}
 		_Check_return_ bool Valid() const noexcept {
 			return (SocketHandle != INVALID_SOCKET && (UsingTLS ? TLSComplete : true));
 		}

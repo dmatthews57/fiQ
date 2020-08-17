@@ -83,6 +83,11 @@ public:
 	}
 
 	//======================================================================================================================
+	// time_point accessor
+	using SteadyMSPoint = std::chrono::time_point<std::chrono::steady_clock,std::chrono::milliseconds>;
+	SteadyMSPoint GetTimePoint() const noexcept {return t;}
+
+	//======================================================================================================================
 	// Defaulted public constructors/assignment operators/destructor
 	SteadyClock() noexcept = default;
 	SteadyClock(const SteadyClock&) = default;
@@ -101,7 +106,6 @@ public:
 	}
 
 private:
-	using SteadyMSPoint = std::chrono::time_point<std::chrono::steady_clock,std::chrono::milliseconds>;
 	SteadyMSPoint t = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
 };
 

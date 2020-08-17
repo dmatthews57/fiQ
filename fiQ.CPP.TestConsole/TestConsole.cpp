@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "Logging/LogSink.h"
+#include "Logging/ConsoleSink.h"
 #include "Tools/Exceptions.h"
 using namespace FIQCPPBASE;
 
@@ -18,12 +18,14 @@ void Outermost() {
 
 #include "Comms/Comms.h"
 
-class testrec : public CommsClient {
+std::timed_mutex tmut;
+
+class testrec : public CommsClient, ThreadOperator<int> {
 public:
 	void IBConnect() noexcept(false) override {printf("IBConnect\n");}
 	void IBData() noexcept(false) override {printf("IBData\n");}
 	void IBDisconnect() noexcept(false) override {printf("IBDisconnect\n");}
-	Comms::ListenerTicket listen() {
+	Comms::ListenerTicket listen(unsigned short port) {
 		//printf("[%s]\n", c.GetConfigParm("test1").c_str());
 		//printf("[%s]\n", c.GetConfigParm("Test2.......................").c_str());
 		//printf("[%s]\n", c.GetConfigParm("NOTHERE").c_str());
@@ -34,7 +36,7 @@ public:
 		//c.SetConfigParms(Connection::ConfigParms{{"TEST1","VAL1"},{"TEST2","VAL2"}});
 		//c.AddConfigParm(std::string("TEST1....................."), std::string("TEST2....................."));
 		auto c = std::make_shared<Connection>();
-		c->SetLocal(8000).ReadConfig(Tokenizer::CreateCopy<10>("EXTHEADER|RAW|TEST1=VALUE1..................|TEST2.......................=VALUE2|BLAH||TLSCERT=MY(notthere)", "|"));
+		c->SetLocal(port).ReadConfig(Tokenizer::CreateCopy<10>("EXTHEADER|RAW|TEST1=VALUE1..................|TEST2.......................=VALUE2|BLAH||TLSCERT=MY(localhost)", "|"));
 		std::string lasterr;
 		auto t = Comms::RegisterListener(shared_from_this(), c, &lasterr);
 		if(t == 0) printf("Registration failed [%s]\n", lasterr.c_str());
@@ -43,10 +45,29 @@ public:
 	Comms::SessionTicket call() {
 		auto c = std::make_shared<Connection>();
 		c->SetRemote("127.0.0.1:8000").SetFlagOn(CommFlags::ExtendedHeader);
-		return Comms::RequestConnect(shared_from_this(), c);
+		std::string lasterr;
+		auto t = Comms::RequestConnect(shared_from_this(), c, &lasterr);
+		if(t == 0) printf("Registration failed [%s]\n", lasterr.c_str());
+		return t;
 	}
 	testrec() : CommsClient(name) {}
-	~testrec() {printf("TestRec destr\n");}
+	~testrec() noexcept(false) {printf("TestRec destr\n");}
+
+	void StartThread() {ThreadStart();}
+	void StopThread() {ThreadWaitStop(INFINITE);}
+
+	unsigned int ThreadExecute() override {
+		printf("Thread running\n");
+		const SteadyClock EndTime(std::chrono::milliseconds{500});
+		std::unique_lock<std::timed_mutex> lock(tmut, EndTime.GetTimePoint());
+		printf("Thread lock: %d\n", lock.owns_lock());
+		lock.lock();
+		printf("Thread lock: %d\n", lock.owns_lock());
+		Sleep(2000);
+		printf("Thread stopping\n");
+		return 0;
+	}
+
 private:
 	const std::string name = "TESTREC";
 };
@@ -61,17 +82,29 @@ int main()
 	SetUnhandledExceptionFilter(&Exceptions::UnhandledExceptionFilter);
 
 	try {
+		LogSink::AddSink<ConsoleSink>(LogLevel::Debug, ConsoleSink::Config { });
+		LogSink::InitializeSinks();
 		SocketOps::InitializeSockets(true);
 		Comms::Initialize();
 
+		std::unique_lock<std::timed_mutex> lock(tmut);
+		printf("Main lock: %d\n", lock.owns_lock());
+
 		{std::shared_ptr<testrec> tr = std::make_shared<testrec>();
-		const auto lticket = tr->listen();
-		printf("Listener ticket: %llu\n", lticket);
-		const auto lticket2 = tr->listen();
-		printf("Listener ticket: %llu\n", lticket);
+		tr->StartThread();
+
+		const auto lticket = tr->listen(8000);
+		const auto lticket2 = tr->listen(8001);
 		const auto sticket = tr->call();
-		printf("Session ticket: %llu\n", sticket);
-		}
+
+		Comms::DeregisterListener(lticket, 500);
+		Comms::DeregisterListener(lticket2, 0);
+		Comms::Disconnect(sticket);
+		lock.unlock();
+		tr->StopThread();}
+		printf("Main lock: %d\n", lock.owns_lock());
+		lock.lock();
+		printf("Main lock: %d\n", lock.owns_lock());
 
 		Comms::Cleanup();
 		SocketOps::CleanupSockets();

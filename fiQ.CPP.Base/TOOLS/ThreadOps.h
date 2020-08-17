@@ -23,6 +23,7 @@ public:
 	public:
 		// Public accessor functions
 		_Check_return_ bool IsLocked() const noexcept {return LockFlag;}
+		void EnsureLocked() const {if(LockFlag == false) throw FORMAT_RUNTIME_ERROR("Failed to acquire lock");}
 
 		// Public constructor (locked by pass_key so caller must instantiate via Locks::Acquire)
 		Guard(Locks::pass_key, T& lock) noexcept(false) : Lock(lock), LockFlag(false) {Lock.Lock(LockFlag);}
@@ -83,6 +84,50 @@ public:
 }; // (end class Locks)
 
 //==========================================================================================================================
+// ThreadOps: Class providing additional tools for thread management
+class ThreadOps
+{
+public:
+
+	//======================================================================================================================
+	// Event: Class wrapping a Win32 event and providing set/reset/wait management
+	class Event {
+	public:
+		//==================================================================================================================
+		// Event management functions
+		void Set() {if(hevent != NULL) SetEvent(hevent);}
+		void Reset() {if(hevent != NULL) ResetEvent(hevent);}
+		bool Wait(int Timeout) const {
+			return (hevent == NULL ? false : (WaitForSingleObject(hevent, Timeout) != WAIT_TIMEOUT));
+		}
+
+		//==================================================================================================================
+		// Public constructor/destructor
+		Event(bool _manualreset = true) : hevent(CreateEvent(NULL, _manualreset ? TRUE : FALSE, FALSE, NULL)) {
+			if(hevent == NULL) throw std::runtime_error("Event initialization failed");
+		}
+		~Event() {if(hevent != NULL) CloseHandle(hevent);}
+		// Move constructor/assignment operator
+		Event(Event&& e) : hevent(e.hevent) {
+			if(hevent == NULL) throw std::runtime_error("Event initialization failed");
+			e.hevent = NULL;
+		}
+		Event& operator=(Event&& e) {
+			hevent = e.hevent;
+			e.hevent = NULL;
+			return *this;
+		}
+		// Deleted copy constructor/assignment operator
+		Event(const Event&) = delete;
+		Event& operator=(const Event&) = delete;
+
+	private:
+		HANDLE hevent;
+	};
+
+}; // (end class ThreadOps)
+
+//==========================================================================================================================
 // ThreadOperator: Base class providing ability to manage an internal worker thread
 template<typename T>
 class ThreadOperator
@@ -123,25 +168,23 @@ protected:
 	void ThreadClearEventFlag();
 
 	//======================================================================================================================
+	// Protected constructor/destructor
+	ThreadOperator() noexcept(false) : TO_Event(true), TO_QueueLock(TO_ShouldRun) {}
+	~ThreadOperator() noexcept(false); // Non-virtual (don't allow deletion of objects through ThreadOperator pointer)
+
+	//======================================================================================================================
 	// Deleted copy/move constructors and assignment operators
 	ThreadOperator(const ThreadOperator&) = delete;
 	ThreadOperator(ThreadOperator&&) = delete;
 	ThreadOperator& operator=(const ThreadOperator&) = delete;
 	ThreadOperator& operator=(ThreadOperator&&) = delete;
 
-protected:
-
-	//======================================================================================================================
-	// Protected constructor/destructor
-	ThreadOperator() noexcept : TO_QueueLock(TO_ShouldRun) {}
-	~ThreadOperator() noexcept(false); // Non-virtual (don't allow deletion of objects through ThreadOperator pointer)
-
 private:
 
 	//======================================================================================================================
 	// Thread management variables
 	HANDLE TO_ThreadHandle = NULL;
-	HANDLE TO_EventHandle = NULL;
+	ThreadOps::Event TO_Event;
 	bool TO_ShouldRun = false;
 	int TO_Priority = 0;
 	Locks::SpinLock TO_QueueLock;
@@ -226,24 +269,23 @@ inline ThreadOperator<T>::~ThreadOperator() noexcept(false) {
 			"WARNING: Thread ID %08X destructing without shutdown, attempting now", GetThreadId(TO_ThreadHandle));
 		TO_ShouldRun = false;
 		TO_QueueLock.Invalidate(); // Ensure any thread waiting on lock gives up
-		if(TO_EventHandle != NULL) SetEvent(TO_EventHandle);
+		TO_Event.Set();
 		if(WaitForSingleObject(TO_ThreadHandle, 1000) != WAIT_OBJECT_0) {
 			LogSink::StdErrLog(
 				"WARNING: Thread ID %08X shutdown failed, destruction will proceed", GetThreadId(TO_ThreadHandle));
 		}
 		CloseHandle(TO_ThreadHandle);
 	}
-	if(TO_EventHandle != NULL) CloseHandle(TO_EventHandle);
 }
 // ThreadOperator::ThreadStart: Launch worker thread
 template<typename T>
 GSL_SUPPRESS(type.4) // C-style cast of beginthreadex return value required (it is defined as unsigned, but may return -1)
 inline _Check_return_ bool ThreadOperator<T>::ThreadStart(int Priority) {
-	if(TO_ThreadHandle > 0 || TO_EventHandle != NULL) return false;
+	if(TO_ThreadHandle > 0) return false;
 	TO_ShouldRun = true;
 	TO_QueueLock.Init();
+	TO_Event.Reset();
 	TO_Priority = Priority;
-	TO_EventHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
 	TO_ThreadHandle = (HANDLE)_beginthreadex(
 		nullptr,	// Security (default)
 		0,			// Stack size (Default)
@@ -259,7 +301,7 @@ template<typename T>
 inline void ThreadOperator<T>::ThreadFlagStop() {
 	// Set thread status flag, trigger event to ensure sleeping threads wake up
 	TO_ShouldRun = false;
-	if(TO_EventHandle != NULL) SetEvent(TO_EventHandle);
+	TO_Event.Set();
 }
 // ThreadOperator::ThreadWaitStop: Inform worker thread it should stop, wait for it to do so
 template<typename T>
@@ -267,7 +309,7 @@ inline _Check_return_ bool ThreadOperator<T>::ThreadWaitStop(int Timeout) {
 	// Set thread status flag, trigger event to ensure sleeping threads wake up:
 	TO_ShouldRun = false;
 	TO_QueueLock.Invalidate(); // Ensure any thread waiting on lock gives up
-	if(TO_EventHandle != NULL) SetEvent(TO_EventHandle);
+	TO_Event.Set();
 
 	// If thread handle has not already been cleared, wait for shutdown:
 	bool ShutdownClean = (TO_ThreadHandle <= 0);
@@ -276,15 +318,7 @@ inline _Check_return_ bool ThreadOperator<T>::ThreadWaitStop(int Timeout) {
 		if(ShutdownClean) {
 			CloseHandle(TO_ThreadHandle);
 			TO_ThreadHandle = NULL;
-			if(TO_EventHandle != NULL) {
-				CloseHandle(TO_EventHandle);
-				TO_EventHandle = NULL;
-			}
 		}
-	}
-	else if(TO_EventHandle != NULL) {
-		CloseHandle(TO_EventHandle);
-		TO_EventHandle = NULL;
 	}
 	return ShutdownClean;
 }
@@ -301,7 +335,7 @@ inline size_t ThreadOperator<T>::ThreadQueueWork(ThreadWorkUnit&& work) {
 		// Transfer ownership of work unit from input pointer to back of queue:
 		TO_WorkQueue.emplace_back(std::move(work));
 		const size_t rc = TO_WorkQueue.size();
-		if(TO_EventHandle) SetEvent(TO_EventHandle);
+		TO_Event.Set();
 		return rc;
 	}
 	return 0;
@@ -315,7 +349,7 @@ inline size_t ThreadOperator<T>::ThreadQueueWork(Args&&...args) {
 		// Construct unit of work at back of queue, using arguments provided:
 		TO_WorkQueue.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
 		const size_t rc = TO_WorkQueue.size();
-		if(TO_EventHandle) SetEvent(TO_EventHandle);
+		TO_Event.Set();
 		return rc;
 	}
 	return 0;
@@ -331,10 +365,7 @@ template<typename T>
 _Check_return_ bool ThreadOperator<T>::ThreadShouldRun() const noexcept {return TO_ShouldRun;}
 // ThreadOperator::ThreadWaitEvent: Wait for thread event to become signaled
 template<typename T>
-inline bool ThreadOperator<T>::ThreadWaitEvent(int Timeout) const {
-	// Return true if event is flagged, false if wait timed out (or event handle is invalid):
-	return (TO_EventHandle == NULL) ? false : (WaitForSingleObject(TO_EventHandle, Timeout) != WAIT_TIMEOUT);
-}
+inline bool ThreadOperator<T>::ThreadWaitEvent(int Timeout) const {return TO_Event.Wait(Timeout);}
 // ThreadOperator::ThreadDequeueWork: Retrieve work item from front of queue
 template<typename T>
 inline bool ThreadOperator<T>::ThreadDequeueWork(ThreadWorkUnit& work) noexcept(false) {
@@ -349,7 +380,7 @@ inline bool ThreadOperator<T>::ThreadDequeueWork(ThreadWorkUnit& work) noexcept(
 			rc = true;
 			TO_WorkQueue.pop_front();
 			// If queue is now empty, ensure status of event is cleared:
-			if(TO_WorkQueue.empty() && TO_ShouldRun && TO_EventHandle != NULL) ResetEvent(TO_EventHandle);
+			if(TO_WorkQueue.empty() && TO_ShouldRun) TO_Event.Reset();
 		}
 	}
 	return rc;
@@ -373,15 +404,15 @@ inline void ThreadOperator<T>::ThreadRequeueWork(ThreadWorkUnit&& work) {
 	auto lock = Locks::Acquire(TO_QueueLock);
 	if(lock.IsLocked()) {
 		TO_WorkQueue.emplace_front(std::move(work));
-		if(TO_EventHandle) SetEvent(TO_EventHandle);
+		TO_Event.Set();
 	}
 }
 // ThreadOperator::ThreadFlagEvent: Manually set event active
 template<typename T>
-inline void ThreadOperator<T>::ThreadFlagEvent() {if(TO_EventHandle) SetEvent(TO_EventHandle);}
+inline void ThreadOperator<T>::ThreadFlagEvent() {TO_Event.Set();}
 // ThreadOperator::ThreadClearEventFlag: Manually set event inactive
 template<typename T>
-inline void ThreadOperator<T>::ThreadClearEventFlag() {if(TO_EventHandle) ResetEvent(TO_EventHandle);}
+inline void ThreadOperator<T>::ThreadClearEventFlag() {TO_Event.Reset();}
 #pragma endregion ThreadOperator
 
 }; // (end namespace FIQCPPBASE)

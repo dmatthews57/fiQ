@@ -91,6 +91,7 @@ _Check_return_ MessageNode::RouteResult FuturexHSMNode::GenerateKey(HSMRequest& 
 		// Lock access to echo counter, format to local buffer:
 		char echoval[10] = {0};
 		{auto lock = Locks::Acquire(EchoLock);
+		lock.EnsureLocked();
 		if(++EchoCount > 9999) EchoCount = 1;
 		StringOps::Decimal::ExWriteString<4>(echoval, EchoCount);}
 		request.append(echoval, 4);
@@ -135,6 +136,7 @@ _Check_return_ MessageNode::RouteResult FuturexHSMNode::GenerateKey(HSMRequest& 
 			// Lock access to echo counter, format to local buffer:
 			char echoval[10] = {0};
 			{auto lock = Locks::Acquire(EchoLock);
+			lock.EnsureLocked();
 			if(++EchoCount > 9999) EchoCount = 1;
 			StringOps::Decimal::ExWriteString<4>(echoval, EchoCount);}
 			request.append(echoval, 4);
@@ -235,6 +237,7 @@ _Check_return_ MessageNode::RouteResult FuturexHSMNode::TranslateKey(HSMRequest&
 		// Lock access to echo counter, format to local buffer:
 		char echoval[10] = {0};
 		{auto lock = Locks::Acquire(EchoLock);
+		lock.EnsureLocked();
 		if(++EchoCount > 9999) EchoCount = 1;
 		StringOps::Decimal::ExWriteString<4>(echoval, EchoCount);}
 		request.append(echoval, 4);
@@ -338,6 +341,7 @@ _Check_return_ MessageNode::RouteResult FuturexHSMNode::TranslatePIN(HSMRequest&
 		// Lock access to echo counter, format to local buffer:
 		char echoval[10] = {0};
 		{auto lock = Locks::Acquire(EchoLock);
+		lock.EnsureLocked();
 		if(++EchoCount > 9999) EchoCount = 1;
 		StringOps::Decimal::ExWriteString<4>(echoval, EchoCount);}
 		request.append(echoval, 4);

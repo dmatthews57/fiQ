@@ -21,14 +21,6 @@
 #define VC_EXTRALEAN			// Exclude rarely-used stuff from Windows headers
 #endif
 
-//#ifndef _SQLNCLI_OLEDB_IGNORE_DEPRECATION_WARNING_
-//#define _SQLNCLI_OLEDB_IGNORE_DEPRECATION_WARNING_	// Silence deprecation of SQL Native Client (to be replaced)
-//#endif
-//
-//#ifndef DBINITCONSTANTS
-//#define DBINITCONSTANTS			// Used by OLEDB
-//#endif
-
 #include <memory> // Must be before stdlib to support memory functions
 #ifdef _DEBUG // In debug mode, ensure that CRT debugger enables memory leak tracking:
 #define _CRTDBG_MAP_ALLOC
@@ -38,32 +30,20 @@
 #include <stdlib.h>
 #endif
 
-#include <stdio.h>
 
 #include <algorithm>
-//#include <cctype>
-//#include <direct.h>
-//#include <exception>
-//#include <fcntl.h>
-//#include "io.h"
-//#include <inttypes.h>
-//#include <math.h>
-//#include <objbase.h>
-#include <locale>
 #include <codecvt>
+#include <locale>
+#include <mutex>
+#include <stdio.h>
+#include <time.h>
 
 // STL containers:
 #include <deque>
 #include <map>
 #include <set>
 #include <string>
-//#include <tuple>
 #include <vector>
-
-//#include <sys/stat.h>
-//#include <tchar.h>
-#include <time.h>
-//#include <sys/timeb.h>
 
 #include "Tools/gsl.h" // Include local version - may use legit one someday
 

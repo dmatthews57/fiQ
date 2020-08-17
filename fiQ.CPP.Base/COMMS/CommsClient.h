@@ -23,7 +23,7 @@ public:
 
 	//======================================================================================================================
 	// Defaulted public virtual destructor
-	virtual ~CommsClient() = default;
+	virtual ~CommsClient() noexcept(false) {} // Cannot be defaulted
 	// Deleted copy/move constructors and assignment operators
 	CommsClient(const CommsClient&) = delete;
 	CommsClient(CommsClient&&) = delete;
